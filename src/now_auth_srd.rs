@@ -1,6 +1,6 @@
-extern crate rand;
-extern crate num;
-extern crate crypto;
+use std;
+use std::io::{Read, Write, Error};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 /* https://tools.ietf.org/html/rfc3526 */
 
@@ -16,7 +16,7 @@ static SRD_DH_PARAMS: [SrdDhParams; 4] =
     SrdDhParams{
         p_data:
         b"\xAC\x6B\xDB\x41\x32\x4A\x9A\x9B\xF1\x66\xDE\x5E\x13\x89\x58\x2F\
-		\xAF\x72\xB6\x65\x19\x87\xEE\x07\xFC\x31\x92\x94\x3D\xB5\x60\x50\
+		\xAF\x72\xB6\x65\x19\x87\xEE\x07\xFCl\x31\x92\x94\x3D\xB5\x60\x50\
 		\xA3\x73\x29\xCB\xB4\xA0\x99\xED\x81\x93\xE0\x75\x77\x67\xA1\x3D\
 		\xD5\x23\x12\xAB\x4B\x03\x31\x0D\xCD\x7F\x48\xA9\xDA\x04\xFD\x50\
 		\xE8\x08\x39\x69\xED\xB7\x67\xB0\xCF\x60\x95\x17\x9A\x16\x3A\xB3\
@@ -151,28 +151,28 @@ struct SrdDhParams
 
 pub struct NowSrd<'a, 'b, 'c>
 {
-    server: bool,
+    pub server: bool,
 	//NowSrdCallbacks cbs;
 
-	keys: &'a [u8],
-	key_size: u16,
-	seq_num: u32,
-	username: &'b str,
-	password: &'b str,
+	pub keys: &'a [u8],
+	pub key_size: u16,
+	pub seq_num: u32,
+	pub username: &'b str,
+	pub password: &'b str,
 
-	cert_data: &'c u8,
-	cert_size: usize,
-	cbt_level: u32,
+	pub cert_data: &'c [u8],
+	pub cert_size: usize,
+	pub cbt_level: u32,
 
-	buffers: [&'a[u8];6],
+	pub buffers: [&'a[u8];6],
 
-	client_nonce: [u8; 32],
-	server_nonce: [u8; 32],
-	delegation_key: [u8; 32],
-	integrity_key: [u8; 32],
-	iv: [u8; 32],
+	pub client_nonce: [u8; 32],
+	pub server_nonce: [u8; 32],
+	pub delegation_key: [u8; 32],
+	pub integrity_key: [u8; 32],
+	pub iv: [u8; 32],
 
-	generator: [u8; 2],
+	pub generator: [u8; 2],
 //	NowCCBigNumRef bnGenerator;
 
 //	uint8_t* prime;
@@ -188,26 +188,92 @@ pub struct NowSrd<'a, 'b, 'c>
 //	NowCCBigNumRef bnSecretKey;
 }
 
+pub trait Message{
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self, std::io::Error>
+    where
+        Self: Sized;
+    fn write_to<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error>;
+    fn get_size(&self) -> u32;
+}
+
+impl Message for Vec<u8> {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Vec<u8>, std::io::Error> {
+        let length = reader.read_u16::<LittleEndian>()?;
+        let mut buffer = vec![0; length as usize];
+        reader.read_exact(&mut buffer)?;
+        Ok(buffer)
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
+        let length = self.len() as u16; // TODO: check?
+        writer.write_u16::<LittleEndian>(length)?;
+        writer.write_all(&self)?;
+        Ok(())
+    }
+    fn get_size(&self) -> u32 {
+        // u16 for the length + the vector itself
+        (2 + self.len()) as u32
+    }
+}
+
+struct NowStream<'a>{
+    buffer: &'a [u8],
+    pointer: &'a u8,
+    //capacity
+}
+
 pub struct NowAuthSrdHeader{
-    packet_type: u16,
-    flags: u16
+    pub packet_type: u16,
+    pub flags: u16
 }
 
 pub struct NowAuthSrdNegotiate{
-    packet_type: u16,
-    flags: u16,
-
-    key_size: u16,
-    reserved: u16
+    pub key_size: u16,
+    pub reserved: u16
 }
 
-//pub union NowAuthSrdMessage{
-//    header: NowAuthSrdHeader,
-//    negotiate: NowAuthSrdNegotiate
-//}
+pub struct NowAuthSrdChallenge<'a>{
+    key_size: u16,
+    generator: [u8; 2],
+    prime: &'a [u8],
+    public_key: &'a [u8],
+    nonce: &'a [u8],
+    cbt: [u8; 32],
+    mac: [u8; 32]
+}
 
-pub fn now_srd_read_msg(ctx: &NowSrd, /*msg: &NowAuthSrdMessage,*/ packet_type: u8) -> u32
+pub enum NowAuthSrdPayload<'a>{
+    NowAuthSrdNegotiate(NowAuthSrdNegotiate),
+    NowAuthSrdChallenge(NowAuthSrdChallenge<'a>)
+}
+
+pub struct NowAuthSrdMessage<'a>{
+    pub header: NowAuthSrdHeader,
+    pub payload: NowAuthSrdPayload<'a>
+}
+
+pub fn now_srd_read_msg(ctx: &NowSrd, msg: &NowAuthSrdMessage, packet_type: u8) -> i32
 {
+    let nstatus:u32 = 0;
+    let header: &NowAuthSrdHeader = &msg.header;
+
+    // Returns an error if the type is not expected
+    if header.packet_type != packet_type as u16 {
+        return -1;
+    }
+
+    match header.packet_type as u8{
+        NOW_AUTH_SRD_NEGOTIATE_ID => {
+
+        },
+        NOW_AUTH_SRD_CHALLENGE_ID => {
+
+        },
+        _ => {
+            // Returns if the type is unknown
+            return -1;
+        }
+    }
     10
 }
 
