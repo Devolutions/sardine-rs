@@ -1,5 +1,5 @@
 [package]
-name = "rust-srd"
+name = "sardine-rs"
 version = "0.1.0"
 authors = ["pdugre"]
 
@@ -7,3 +7,4 @@ authors = ["pdugre"]
 rand = "0.4"
 rust-crypto = "^0.2"
 num="0.1"
+byteorder = "1.2.1"

@@ -4,6 +4,13 @@ extern crate crypto;
 
 /* https://tools.ietf.org/html/rfc3526 */
 
+pub const NOW_AUTH_SRD_NEGOTIATE_ID: u8 = 1;
+pub const NOW_AUTH_SRD_CHALLENGE_ID: u8 = 2;
+pub const NOW_AUTH_SRD_RESPONSE_ID: u8 = 3;
+pub const NOW_AUTH_SRD_CONFIRM_ID: u8 = 4;
+pub const NOW_AUTH_SRD_DELEGATE_ID: u8 = 5;
+pub const NOW_AUTH_SRD_RESULT_ID: u8 = 6;
+
 static SRD_DH_PARAMS: [SrdDhParams; 4] =
 [
     SrdDhParams{
@@ -142,7 +149,7 @@ struct SrdDhParams
 	g_data: &'static [u8]
 }
 
-struct NowSrd<'a, 'b, 'c>
+pub struct NowSrd<'a, 'b, 'c>
 {
     server: bool,
 	//NowSrdCallbacks cbs;
@@ -180,5 +187,30 @@ struct NowSrd<'a, 'b, 'c>
 //	NowCCBigNumRef bnPrivateKey;
 //	NowCCBigNumRef bnSecretKey;
 }
+
+pub struct NowAuthSrdHeader{
+    packet_type: u16,
+    flags: u16
+}
+
+pub struct NowAuthSrdNegotiate{
+    packet_type: u16,
+    flags: u16,
+
+    key_size: u16,
+    reserved: u16
+}
+
+//pub union NowAuthSrdMessage{
+//    header: NowAuthSrdHeader,
+//    negotiate: NowAuthSrdNegotiate
+//}
+
+pub fn now_srd_read_msg(ctx: &NowSrd, /*msg: &NowAuthSrdMessage,*/ packet_type: u8) -> u32
+{
+    10
+}
+
+
 
 
