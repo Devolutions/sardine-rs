@@ -1,0 +1,9 @@
+[package]
+name = "rust-srd"
+version = "0.1.0"
+authors = ["pdugre"]
+
+[dependencies]
+rand = "0.4"
+rust-crypto = "^0.2"
+num="0.1"
