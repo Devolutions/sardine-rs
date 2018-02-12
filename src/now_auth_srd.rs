@@ -149,30 +149,32 @@ struct SrdDhParams
 	g_data: &'static [u8]
 }
 
-pub struct NowSrd<'a, 'b, 'c>
+pub struct NowSrd<'a>
 {
-    pub server: bool,
+    is_server: bool,
 	//NowSrdCallbacks cbs;
 
-	pub keys: &'a [u8],
-	pub key_size: u16,
-	pub seq_num: u32,
-	pub username: &'b str,
-	pub password: &'b str,
+	keys: &'a [u8],
+    key_size: u16,
+	seq_num: u32,
+	username: &'a str,
+	password: &'a str,
 
-	pub cert_data: &'c [u8],
-	pub cert_size: usize,
-	pub cbt_level: u32,
+	cert_data: &'a [u8],
+	cert_size: usize,
+	cbt_level: u32,
 
-	pub buffers: [&'a[u8];6],
+	buffers: [&'a[u8];6],
 
-	pub client_nonce: [u8; 32],
-	pub server_nonce: [u8; 32],
-	pub delegation_key: [u8; 32],
-	pub integrity_key: [u8; 32],
-	pub iv: [u8; 32],
+	client_nonce: [u8; 32],
+	server_nonce: [u8; 32],
+	delegation_key: [u8; 32],
+	integrity_key: [u8; 32],
+	iv: [u8; 32],
 
-	pub generator: [u8; 2],
+	generator: [u8; 2],
+
+    status: u8
 //	NowCCBigNumRef bnGenerator;
 
 //	uint8_t* prime;
@@ -186,6 +188,55 @@ pub struct NowSrd<'a, 'b, 'c>
 //	NowCCBigNumRef bnPublicKey;
 //	NowCCBigNumRef bnPrivateKey;
 //	NowCCBigNumRef bnSecretKey;
+}
+
+impl<'a> NowSrd<'a> {
+    pub fn new(is_server: bool) -> NowSrd<'a> {
+        NowSrd {
+            is_server,
+            keys: &[0; 32],
+            key_size: 0,
+            seq_num: 0,
+            username: "hello",
+            password: "world!",
+
+            cert_data: &[0; 32],
+            cert_size: 0,
+            cbt_level: 0,
+
+            buffers: [&[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32]],
+
+            client_nonce: [0; 32],
+            server_nonce: [0; 32],
+            delegation_key: [0; 32],
+            integrity_key: [0; 32],
+            iv: [0; 32],
+
+            generator: [0; 2],
+            status: 1
+        }
+    }
+
+    pub fn now_srd_read_msg(&self, msg: &NowAuthSrdMessage, packet_type: u8) -> i32
+    {
+        let nstatus: u32 = 0;
+        let header: &NowAuthSrdHeader = &msg.header;
+
+        // Returns an error if the type is not expected
+        if header.packet_type != packet_type as u16 {
+            return -1;
+        }
+
+        match header.packet_type as u8 {
+            NOW_AUTH_SRD_NEGOTIATE_ID => {},
+            NOW_AUTH_SRD_CHALLENGE_ID => {},
+            _ => {
+                // Returns if the type is unknown
+                return -1;
+            }
+        }
+        10
+    }
 }
 
 pub trait Message{
@@ -216,9 +267,29 @@ impl Message for Vec<u8> {
     }
 }
 
+impl Message for NowAuthSrdHeader{
+    fn read_from<R: Read>(reader: &mut R) -> Result<NowAuthSrdHeader, std::io::Error> {
+        Ok(NowAuthSrdHeader {
+            packet_type: reader.read_u16:: < LittleEndian>()?,
+            flags: reader.read_u16::<LittleEndian>()?
+        })
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
+        writer.write_u16::<LittleEndian>(self.packet_type)?;
+        writer.write_u16::<LittleEndian>(self.flags)?;
+        Ok(())
+    }
+
+    fn get_size(&self) -> u32 {
+        4u32
+    }
+}
+
+
 struct NowStream<'a>{
-    buffer: &'a [u8],
-    pointer: &'a u8,
+    pub buffer: &'a [u8],
+    pub pointer: &'a u8,
     //capacity
 }
 
@@ -251,32 +322,5 @@ pub struct NowAuthSrdMessage<'a>{
     pub header: NowAuthSrdHeader,
     pub payload: NowAuthSrdPayload<'a>
 }
-
-pub fn now_srd_read_msg(ctx: &NowSrd, msg: &NowAuthSrdMessage, packet_type: u8) -> i32
-{
-    let nstatus:u32 = 0;
-    let header: &NowAuthSrdHeader = &msg.header;
-
-    // Returns an error if the type is not expected
-    if header.packet_type != packet_type as u16 {
-        return -1;
-    }
-
-    match header.packet_type as u8{
-        NOW_AUTH_SRD_NEGOTIATE_ID => {
-
-        },
-        NOW_AUTH_SRD_CHALLENGE_ID => {
-
-        },
-        _ => {
-            // Returns if the type is unknown
-            return -1;
-        }
-    }
-    10
-}
-
-
 
 
