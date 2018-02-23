@@ -20,8 +20,13 @@ fn simple_test() {
         ),
     };
 
+    let mut buffer: Vec<u8> = Vec::new();
     let srd: now_auth_srd::NowSrd = now_auth_srd::NowSrd::new(false);
 
+    srd.now_srd_write_msg(&msg, &mut buffer);
+
+    assert_eq!(buffer, [1, 0, 0, 0, 0, 0, 0, 0]);
+    println!("{:?}", buffer);
     //assert_eq!(srd.now_srd_read_msg(&msg, 1), 10);
     //assert_eq!(srd.now_srd_read_msg(&msg, 0), -1);
 }

@@ -336,7 +336,7 @@ impl NowAuthSrdHeader {
     }
 
     fn get_size(&self) -> u32 {
-        4u32
+        8u32
     }
 }
 
@@ -358,8 +358,8 @@ impl<'a> NowAuthSrdPayload<'a> {
 
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
         //TODO
-        match self {
-            NowAuthSrdPayload::NowAuthSrdNegotiate(message) => {
+        match *self {
+            NowAuthSrdPayload::NowAuthSrdNegotiate(ref message) => {
                 message.write_to(buffer);
                 Ok(())
             }
@@ -370,13 +370,12 @@ impl<'a> NowAuthSrdPayload<'a> {
         }
         //buffer.write_u16::<LittleEndian>(self.packet_type)?;
         //buffer.write_u16::<LittleEndian>(self.flags)?;
-        Ok(())
     }
 
     fn get_size(&self) -> u32 {
-        match self {
-            NowAuthSrdPayload::NowAuthSrdNegotiate(message) => {
-
+        match *self {
+            NowAuthSrdPayload::NowAuthSrdNegotiate(ref message) => {
+                message.get_size()
             }
             _ => 0,
         }
@@ -393,16 +392,13 @@ impl NowAuthSrdNegotiate {
     }
 
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
-        //TODO
-        //buffer.write_u16::<LittleEndian>(self.packet_type)?;
-        //buffer.write_u16::<LittleEndian>(self.flags)?;
+        buffer.write_u16::<LittleEndian>(self.key_size)?;
+        buffer.write_u16::<LittleEndian>(self.reserved)?;
         Ok(())
     }
 
     fn get_size(&self) -> u32 {
-        //TODO
-        10
-        //4u32 + self.payload.get_size()
+        4u32
     }
 }
 
