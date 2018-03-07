@@ -1,14 +1,16 @@
-use message_types::NowAuthSrdMessage;
-use message_types::NowAuthSrdNegotiate;
+use message_types::{NowAuthSrdMessage, NowAuthSrdNegotiate, NowAuthSrdChallenge};
+use now_auth_srd::{NOW_AUTH_SRD_NEGOTIATE_ID, NOW_AUTH_SRD_CHALLENGE_ID};
 
 #[test]
 fn negotiate_encoding() {
-    let msg: NowAuthSrdNegotiate = NowAuthSrdNegotiate {
+    let msg = NowAuthSrdNegotiate {
         packet_type: 1,
         flags: 256,
         key_size: 2,
         reserved: 257,
     };
+
+    assert_eq!(msg.get_id(), NOW_AUTH_SRD_NEGOTIATE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
     match msg.write_to(&mut buffer){
@@ -17,6 +19,8 @@ fn negotiate_encoding() {
     };
 
     assert_eq!(buffer, [1, 0, 0, 1, 2, 0, 1, 1]);
+    assert_eq!(buffer.len(), msg.get_size());
+
 
     match NowAuthSrdNegotiate::read_from(&buffer) {
         Ok(x) => {
@@ -29,14 +33,19 @@ fn negotiate_encoding() {
     };
 }
 
-/*#[test]
+#[test]
 fn challenge_encoding() {
-    let msg: NowAuthSrdNegotiate = NowAuthSrdNegotiate {
-        packet_type: 1,
-        flags: 256,
-        key_size: 2,
-        reserved: 257,
+    let msg = NowAuthSrdChallenge {
+        packet_type: 2,
+        flags: 0,
+        key_size: 256,
+        generator: [0, 0],
+        prime: vec!(0u8; 256),
+        public_key: vec!(0u8; 256),
+        nonce: [0u8; 32],
     };
+
+    assert_eq!(msg.get_id(), NOW_AUTH_SRD_CHALLENGE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
     match msg.write_to(&mut buffer){
@@ -44,15 +53,22 @@ fn challenge_encoding() {
         Err(_) => assert!(false),
     };
 
-    assert_eq!(buffer, [1, 0, 0, 1, 2, 0, 1, 1]);
+    let mut expected = vec![2, 0, 0, 0, 0, 1, 0, 0];
+    expected.append(&mut vec![0u8; 544]);
 
-    match NowAuthSrdNegotiate::read_from(&buffer) {
+    assert_eq!(buffer, expected);
+    assert_eq!(buffer.len(), msg.get_size());
+
+    match NowAuthSrdChallenge::read_from(&buffer) {
         Ok(x) => {
-            assert_eq!(x.packet_type, 1);
-            assert_eq!(x.flags, 256);
-            assert_eq!(x.key_size, 2);
-            assert_eq!(x.reserved, 257);
+            assert_eq!(x.packet_type, 2);
+            assert_eq!(x.flags, 0);
+            assert_eq!(x.key_size, 256);
+            assert_eq!(x.generator, [0, 0]);
+            assert_eq!(x.prime, vec![0u8; 256]);
+            assert_eq!(x.public_key, vec![0u8; 256]);
+            assert_eq!(x.nonce, [0u8; 32]);
         },
         Err(_) => assert!(false),
     };
-}*/
+}

@@ -1,18 +1,19 @@
 use std;
 use std::io::Read;
+use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use message_types::NowAuthSrdMessage;
 use now_auth_srd::NOW_AUTH_SRD_CHALLENGE_ID;
 
 pub struct NowAuthSrdChallenge {
-    packet_type: u16,
-    flags: u16,
-    key_size: u16,
-    generator: [u8; 2],
-    prime: Vec<u8>,
-    public_key: Vec<u8>,
-    nonce: [u8; 32],
+    pub packet_type: u16,
+    pub flags: u16,
+    pub key_size: u16,
+    pub generator: [u8; 2],
+    pub prime: Vec<u8>,
+    pub public_key: Vec<u8>,
+    pub nonce: [u8; 32],
 }
 
 impl NowAuthSrdMessage for NowAuthSrdChallenge{
@@ -42,15 +43,18 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge{
     }
 
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
-        /*buffer.write_u16::<LittleEndian>(self.packet_type)?;
+        buffer.write_u16::<LittleEndian>(self.packet_type)?;
         buffer.write_u16::<LittleEndian>(self.flags)?;
         buffer.write_u16::<LittleEndian>(self.key_size)?;
-        buffer.write_u16::<LittleEndian>(self.reserved)?;*/
+        buffer.write_all(&self.generator)?;
+        buffer.write_all(&self.prime)?;
+        buffer.write_all(&self.public_key)?;
+        buffer.write_all(&self.nonce)?;
         Ok(())
     }
 
-    fn get_size(&self) -> u32 {
-        40u32 + self.key_size as u32 * 2
+    fn get_size(&self) -> usize {
+        40usize + self.key_size as usize * 2
     }
 
     fn get_id(&self) -> u16{

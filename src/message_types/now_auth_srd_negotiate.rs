@@ -31,8 +31,8 @@ impl NowAuthSrdMessage for NowAuthSrdNegotiate{
         Ok(())
     }
 
-    fn get_size(&self) -> u32 {
-        8u32
+    fn get_size(&self) -> usize {
+        8usize
     }
 
     fn get_id(&self) -> u16{
