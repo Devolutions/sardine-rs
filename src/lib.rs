@@ -3,13 +3,15 @@ extern crate crypto;
 extern crate num;
 extern crate rand;
 
+mod message_types;
 mod now_auth_srd;
 
-use now_auth_srd::NowAuthSrdMessage;
+use message_types::NowAuthSrdMessage;
+use message_types::NowAuthSrdNegotiate;
 
 #[test]
 fn simple_test() {
-    let msg: now_auth_srd::NowAuthSrdNegotiate = now_auth_srd::NowAuthSrdNegotiate {
+    let msg: NowAuthSrdNegotiate = NowAuthSrdNegotiate {
         packet_type: 1,
         flags: 256,
         key_size: 2,
@@ -22,8 +24,8 @@ fn simple_test() {
     srd.now_srd_write_msg(&msg, &mut buffer);
     assert_eq!(buffer, [1, 0, 0, 1, 2, 0, 1, 1]);
 
-    let decoded_msg: now_auth_srd::NowAuthSrdNegotiate =
-        now_auth_srd::NowAuthSrdNegotiate::read_from(&buffer).unwrap();
+    let decoded_msg: NowAuthSrdNegotiate =
+        NowAuthSrdNegotiate::read_from(&buffer).unwrap();
 
     assert_eq!(decoded_msg.packet_type, 1);
     assert_eq!(decoded_msg.flags, 256);
@@ -31,6 +33,4 @@ fn simple_test() {
     assert_eq!(decoded_msg.reserved, 257);
 
     println!("{:?}", buffer);
-    //assert_eq!(srd.now_srd_read_msg(&msg, 1), 10);
-    //assert_eq!(srd.now_srd_read_msg(&msg, 0), -1);
 }
