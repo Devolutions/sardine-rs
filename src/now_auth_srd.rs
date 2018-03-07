@@ -2,14 +2,14 @@ use std;
 use std::io::{Error, ErrorKind, Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-/* https://tools.ietf.org/html/rfc3526 */
-
 pub const NOW_AUTH_SRD_NEGOTIATE_ID: u16 = 1;
 pub const NOW_AUTH_SRD_CHALLENGE_ID: u16 = 2;
 pub const NOW_AUTH_SRD_RESPONSE_ID: u16 = 3;
 pub const NOW_AUTH_SRD_CONFIRM_ID: u16 = 4;
 pub const NOW_AUTH_SRD_DELEGATE_ID: u16 = 5;
 pub const NOW_AUTH_SRD_RESULT_ID: u16 = 6;
+
+/* https://tools.ietf.org/html/rfc3526 */
 
 static SRD_DH_PARAMS: [SrdDhParams; 4] = [
     SrdDhParams {
@@ -144,6 +144,14 @@ struct SrdDhParams {
     g_data: &'static [u8],
 }
 
+pub trait NowAuthSrdMessage {
+    fn read_from(buffer: &[u8]) -> Result<Self, std::io::Error>
+    where
+        Self: Sized;
+    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error>;
+    fn get_size(&self) -> u32;
+}
+
 pub struct NowSrd<'a> {
     is_server: bool,
     //NowSrdCallbacks cbs;
@@ -248,7 +256,8 @@ impl<'a> NowSrd<'a> {
         */
     }
 
-    pub fn now_srd_read_msg(&self, msg: &mut NowAuthSrdMessage, buffer: &mut Vec<u8>) -> i32 {
+    pub fn now_srd_read_msg<T>(&self, msg: &mut T, buffer: &mut Vec<u8>) -> i32
+    where T: NowAuthSrdMessage{
         let mut reader: &[u8] = &buffer;
         10
         /*
@@ -283,55 +292,30 @@ impl<'a> NowSrd<'a> {
     }
 }
 
-/*impl Message for Vec<u8> {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Vec<u8>, std::io::Error> {
-        let length = reader.read_u16::<LittleEndian>()?;
-        let mut buffer = vec![0; length as usize];
-        reader.read_exact(&mut buffer)?;
-        Ok(buffer)
-    }
-
-    fn write_to<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
-        let length = self.len() as u16; // TODO: check?
-        writer.write_u16::<LittleEndian>(length)?;
-        writer.write_all(&self)?;
-        Ok(())
-    }
-    fn get_size(&self) -> u32 {
-        // u16 for the length + the vector itself
-        (2 + self.len()) as u32
-    }
-}*/
-
-impl<'a> NowAuthSrdMessage<'a> {
-    fn read_from(buffer: &mut [u8]) -> Result<NowAuthSrdMessage, std::io::Error> {
-        let header: NowAuthSrdHeader = NowAuthSrdHeader::read_from(buffer)?;
-        let payload: NowAuthSrdPayload = NowAuthSrdPayload::read_from(buffer, header.packet_type)?;
-        Ok(NowAuthSrdMessage { header, payload })
-    }
-
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
-        self.header.write_to(buffer)?;
-        self.payload.write_to(buffer)?;
-        Ok(())
-    }
-
-    fn get_size(&self) -> u32 {
-        self.header.get_size() + self.payload.get_size()
-    }
+pub struct NowAuthSrdNegotiate{
+    pub packet_type: u16,
+    pub flags: u16,
+    pub key_size: u16,
+    pub reserved: u16,
 }
 
-impl NowAuthSrdHeader {
-    fn read_from(mut buffer: &[u8]) -> Result<NowAuthSrdHeader, std::io::Error> {
-        Ok(NowAuthSrdHeader {
-            packet_type: buffer.read_u16::<LittleEndian>()?,
-            flags: buffer.read_u16::<LittleEndian>()?,
+impl NowAuthSrdMessage for NowAuthSrdNegotiate{
+    fn read_from(mut buffer: &[u8]) -> Result<Self, std::io::Error>
+    where
+        Self: Sized{
+            Ok(NowAuthSrdNegotiate {
+                packet_type: buffer.read_u16::<LittleEndian>()?,
+                flags: buffer.read_u16::<LittleEndian>()?,
+                key_size: buffer.read_u16::<LittleEndian>()?,
+                reserved: buffer.read_u16::<LittleEndian>()?,
         })
     }
 
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
         buffer.write_u16::<LittleEndian>(self.packet_type)?;
         buffer.write_u16::<LittleEndian>(self.flags)?;
+        buffer.write_u16::<LittleEndian>(self.key_size)?;
+        buffer.write_u16::<LittleEndian>(self.reserved)?;
         Ok(())
     }
 
@@ -340,85 +324,9 @@ impl NowAuthSrdHeader {
     }
 }
 
-impl<'a> NowAuthSrdPayload<'a> {
-    fn read_from(
-        buffer: &mut [u8],
-        payload_type: u16,
-    ) -> Result<NowAuthSrdPayload, std::io::Error> {
-        match payload_type as u16 {
-            NOW_AUTH_SRD_NEGOTIATE_ID => Ok(NowAuthSrdPayload::NowAuthSrdNegotiate(
-                NowAuthSrdNegotiate::read_from(buffer)?,
-            )),
-            _ => Err(Error::new(
-                ErrorKind::Other,
-                "Invalid message type, cannot decode...",
-            )),
-        }
-    }
-
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
-        //TODO
-        match *self {
-            NowAuthSrdPayload::NowAuthSrdNegotiate(ref message) => {
-                message.write_to(buffer);
-                Ok(())
-            }
-            _ => Err(Error::new(
-                ErrorKind::Other,
-                "Invalid message type, cannot encode...",
-            )),
-        }
-        //buffer.write_u16::<LittleEndian>(self.packet_type)?;
-        //buffer.write_u16::<LittleEndian>(self.flags)?;
-    }
-
-    fn get_size(&self) -> u32 {
-        match *self {
-            NowAuthSrdPayload::NowAuthSrdNegotiate(ref message) => {
-                message.get_size()
-            }
-            _ => 0,
-        }
-        //4u32 + self.payload.get_size()
-    }
-}
-
-impl NowAuthSrdNegotiate {
-    fn read_from(mut buffer: &[u8]) -> Result<NowAuthSrdNegotiate, std::io::Error> {
-        Ok(NowAuthSrdNegotiate {
-            key_size: buffer.read_u16::<LittleEndian>()?,
-            reserved: buffer.read_u16::<LittleEndian>()?,
-        })
-    }
-
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
-        buffer.write_u16::<LittleEndian>(self.key_size)?;
-        buffer.write_u16::<LittleEndian>(self.reserved)?;
-        Ok(())
-    }
-
-    fn get_size(&self) -> u32 {
-        4u32
-    }
-}
-
-struct NowStream<'a> {
-    pub buffer: &'a [u8],
-    pub pointer: &'a u8,
-    //capacity
-}
-
-pub struct NowAuthSrdHeader {
-    pub packet_type: u16,
-    pub flags: u16,
-}
-
-pub struct NowAuthSrdNegotiate {
-    pub key_size: u16,
-    pub reserved: u16,
-}
-
 pub struct NowAuthSrdChallenge<'a> {
+    packet_type: u16,
+    flags: u16,
     key_size: u16,
     generator: [u8; 2],
     prime: &'a [u8],
@@ -426,12 +334,8 @@ pub struct NowAuthSrdChallenge<'a> {
     nonce: [u8; 4],
 }
 
-pub enum NowAuthSrdPayload<'a> {
-    NowAuthSrdNegotiate(NowAuthSrdNegotiate),
-    NowAuthSrdChallenge(NowAuthSrdChallenge<'a>),
-}
-
-pub struct NowAuthSrdMessage<'a> {
-    pub header: NowAuthSrdHeader,
-    pub payload: NowAuthSrdPayload<'a>,
+struct NowStream<'a> {
+    pub buffer: &'a [u8],
+    pub pointer: &'a u8,
+    //capacity
 }
