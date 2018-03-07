@@ -2,6 +2,7 @@ use std;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use message_types::NowAuthSrdMessage;
+use now_auth_srd::NOW_AUTH_SRD_NEGOTIATE_ID;
 
 pub struct NowAuthSrdNegotiate{
     pub packet_type: u16,
@@ -32,5 +33,9 @@ impl NowAuthSrdMessage for NowAuthSrdNegotiate{
 
     fn get_size(&self) -> u32 {
         8u32
+    }
+
+    fn get_id(&self) -> u16{
+        NOW_AUTH_SRD_NEGOTIATE_ID
     }
 }

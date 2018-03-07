@@ -6,4 +6,5 @@ pub trait NowAuthSrdMessage {
         Self: Sized;
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error>;
     fn get_size(&self) -> u32;
+    fn get_id(&self) -> u16;
 }

@@ -1,7 +1,4 @@
 use std;
-use std::io::{Error, ErrorKind, Read, Write};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-
 use message_types::NowAuthSrdMessage;
 
 pub const NOW_AUTH_SRD_NEGOTIATE_ID: u16 = 1;
@@ -149,10 +146,4 @@ impl<'a> NowSrd<'a> {
         10
         */
     }
-}
-
-struct NowStream<'a> {
-    pub buffer: &'a [u8],
-    pub pointer: &'a u8,
-    //capacity
 }
