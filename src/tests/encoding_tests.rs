@@ -149,3 +149,39 @@ fn confirm_encoding() {
         Err(_) => assert!(false),
     };
 }
+
+#[test]
+fn result_encoding() {
+    let msg = NowAuthSrdResult {
+        packet_type: 6,
+        flags: 0,
+        reserved: 0,
+        status: 0,
+        mac: [0u8; 32],
+    };
+
+    assert_eq!(msg.get_id(), NOW_AUTH_SRD_RESULT_ID);
+
+    let mut buffer: Vec<u8> = Vec::new();
+    match msg.write_to(&mut buffer){
+        Ok(_) => (),
+        Err(_) => assert!(false),
+    };
+
+    let mut expected = vec![6, 0, 0, 0, 0, 0, 0, 0];
+    expected.append(&mut vec![0u8; 36]);
+
+    assert_eq!(buffer, expected);
+    assert_eq!(buffer.len(), msg.get_size());
+
+    match NowAuthSrdResult::read_from(&buffer) {
+        Ok(x) => {
+            assert_eq!(x.packet_type, 6);
+            assert_eq!(x.flags, 0);
+            assert_eq!(x.reserved, 0);
+            assert_eq!(x.status, 0);
+            assert_eq!(x.mac, [0u8; 32]);
+        },
+        Err(_) => assert!(false),
+    };
+}
