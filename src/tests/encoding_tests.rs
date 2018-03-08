@@ -1,6 +1,4 @@
 use message_types::*;
-use now_auth_srd::{NOW_AUTH_SRD_NEGOTIATE_ID, NOW_AUTH_SRD_CHALLENGE_ID,
-                    NOW_AUTH_SRD_RESPONSE_ID};
 
 #[test]
 fn negotiate_encoding() {
@@ -109,6 +107,42 @@ fn response_encoding() {
             assert_eq!(x.reserved, 0);
             assert_eq!(x.public_key, vec![0u8; 256]);
             assert_eq!(x.nonce, [0u8; 32]);
+            assert_eq!(x.cbt, [0u8; 32]);
+            assert_eq!(x.mac, [0u8; 32]);
+        },
+        Err(_) => assert!(false),
+    };
+}
+
+#[test]
+fn confirm_encoding() {
+    let msg = NowAuthSrdConfirm {
+        packet_type: 4,
+        flags: 0,
+        reserved: 0,
+        cbt: [0u8; 32],
+        mac: [0u8; 32],
+    };
+
+    assert_eq!(msg.get_id(), NOW_AUTH_SRD_CONFIRM_ID);
+
+    let mut buffer: Vec<u8> = Vec::new();
+    match msg.write_to(&mut buffer){
+        Ok(_) => (),
+        Err(_) => assert!(false),
+    };
+
+    let mut expected = vec![4, 0, 0, 0, 0, 0, 0, 0];
+    expected.append(&mut vec![0u8; 64]);
+
+    assert_eq!(buffer, expected);
+    assert_eq!(buffer.len(), msg.get_size());
+
+    match NowAuthSrdConfirm::read_from(&buffer) {
+        Ok(x) => {
+            assert_eq!(x.packet_type, 4);
+            assert_eq!(x.flags, 0);
+            assert_eq!(x.reserved, 0);
             assert_eq!(x.cbt, [0u8; 32]);
             assert_eq!(x.mac, [0u8; 32]);
         },

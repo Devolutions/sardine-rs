@@ -3,8 +3,7 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::NowAuthSrdMessage;
-use now_auth_srd::NOW_AUTH_SRD_CHALLENGE_ID;
+use message_types::{NowAuthSrdMessage, NOW_AUTH_SRD_CHALLENGE_ID};
 
 pub struct NowAuthSrdChallenge {
     pub packet_type: u16,
@@ -24,10 +23,12 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge{
         let flags = buffer.read_u16::<LittleEndian>()?;
         let key_size = buffer.read_u16::<LittleEndian>()?;
         let generator = [buffer.read_u8()?, buffer.read_u8()?];
+
         let mut prime = vec![0u8; key_size as usize];
         let mut public_key = vec![0u8; key_size as usize];
         buffer.read_exact(&mut prime)?;
         buffer.read_exact(&mut public_key)?;
+
         let mut nonce = [0u8; 32];
         buffer.read_exact(&mut nonce)?;
 

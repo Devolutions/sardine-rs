@@ -1,13 +1,6 @@
 use std;
 use message_types::NowAuthSrdMessage;
 
-pub const NOW_AUTH_SRD_NEGOTIATE_ID: u16 = 1;
-pub const NOW_AUTH_SRD_CHALLENGE_ID: u16 = 2;
-pub const NOW_AUTH_SRD_RESPONSE_ID: u16 = 3;
-pub const NOW_AUTH_SRD_CONFIRM_ID: u16 = 4;
-pub const NOW_AUTH_SRD_DELEGATE_ID: u16 = 5;
-pub const NOW_AUTH_SRD_RESULT_ID: u16 = 6;
-
 pub struct NowSrd<'a> {
     is_server: bool,
     //NowSrdCallbacks cbs;

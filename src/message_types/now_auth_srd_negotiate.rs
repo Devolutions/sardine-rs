@@ -1,8 +1,7 @@
 use std;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::NowAuthSrdMessage;
-use now_auth_srd::NOW_AUTH_SRD_NEGOTIATE_ID;
+use message_types::{NowAuthSrdMessage, NOW_AUTH_SRD_NEGOTIATE_ID};
 
 pub struct NowAuthSrdNegotiate{
     pub packet_type: u16,
