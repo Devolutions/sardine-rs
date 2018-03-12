@@ -24,19 +24,11 @@ pub struct NowSrd<'a> {
 
     generator: [u8; 2],
 
-    status: u8, //	NowCCBigNumRef bnGenerator;
-
-//	uint8_t* prime;
-//	uint8_t* peerKey;
-//	uint8_t* publicKey;
-//	uint8_t* privateKey;
-//	uint8_t* secretKey;
-//
-//	NowCCBigNumRef bnPrime;
-//	NowCCBigNumRef bnPeerKey;
-//	NowCCBigNumRef bnPublicKey;
-//	NowCCBigNumRef bnPrivateKey;
-//	NowCCBigNumRef bnSecretKey;
+    prime: Vec<u8>,
+    peer_key: Vec<u8>,
+    public_key: Vec<u8>,
+    private_key: Vec<u8>,
+    secret_key: Vec<u8>,
 }
 
 impl<'a> NowSrd<'a> {
@@ -45,7 +37,7 @@ impl<'a> NowSrd<'a> {
             is_server,
             keys: &[0; 32],
             key_size: 0,
-            seq_num: 0,
+            seq_num: if is_server { 2 } else { 1 },
             username: "hello",
             password: "world!",
 
@@ -62,7 +54,12 @@ impl<'a> NowSrd<'a> {
             iv: [0; 32],
 
             generator: [0; 2],
-            status: if is_server { 1 } else { 2 },
+
+            prime: Vec::new(),
+            peer_key: Vec::new(),
+            public_key: Vec::new(),
+            private_key: Vec::new(),
+            secret_key: Vec::new(),
         }
     }
 
