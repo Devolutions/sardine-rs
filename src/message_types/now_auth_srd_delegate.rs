@@ -3,7 +3,7 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{NowAuthSrdMessage,NowAuthSrdLogonBlob, NOW_AUTH_SRD_DELEGATE_ID};
+use message_types::{NowAuthSrdLogonBlob, NowAuthSrdMessage, NOW_AUTH_SRD_DELEGATE_ID};
 
 pub struct NowAuthSrdDelegate {
     pub packet_type: u16,
@@ -16,7 +16,8 @@ pub struct NowAuthSrdDelegate {
 impl NowAuthSrdMessage for NowAuthSrdDelegate {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
     where
-        Self: Sized {
+        Self: Sized,
+    {
         let packet_type = buffer.read_u16::<LittleEndian>()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
         let reserved = buffer.read_u32::<LittleEndian>()?;
@@ -49,7 +50,7 @@ impl NowAuthSrdMessage for NowAuthSrdDelegate {
         40usize + self.blob.get_size()
     }
 
-    fn get_id(&self) -> u16{
+    fn get_id(&self) -> u16 {
         NOW_AUTH_SRD_DELEGATE_ID
     }
 }

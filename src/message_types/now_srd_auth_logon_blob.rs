@@ -16,7 +16,8 @@ pub struct NowAuthSrdLogonBlob {
 impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
     where
-        Self: Sized{
+        Self: Sized,
+    {
         let packet_type = buffer.read_u8()?;
         let flags = buffer.read_u8()?;
         let size = buffer.read_u16::<LittleEndian>()?;
@@ -49,7 +50,7 @@ impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
         260usize
     }
 
-    fn get_id(&self) -> u16{
+    fn get_id(&self) -> u16 {
         NOW_AUTH_SRD_LOGON_BLOB_ID
     }
 }

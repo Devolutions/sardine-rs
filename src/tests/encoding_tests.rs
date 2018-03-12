@@ -13,7 +13,7 @@ fn negotiate_encoding() {
     assert_eq!(msg.get_id(), NOW_AUTH_SRD_NEGOTIATE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
-    match msg.write_to(&mut buffer){
+    match msg.write_to(&mut buffer) {
         Ok(_) => (),
         Err(_) => assert!(false),
     };
@@ -29,7 +29,7 @@ fn negotiate_encoding() {
             assert_eq!(x.flags, 256);
             assert_eq!(x.key_size, 2);
             assert_eq!(x.reserved, 257);
-        },
+        }
         Err(_) => assert!(false),
     };
 }
@@ -41,15 +41,15 @@ fn challenge_encoding() {
         flags: 0,
         key_size: 256,
         generator: [0, 0],
-        prime: vec!(0u8; 256),
-        public_key: vec!(0u8; 256),
+        prime: vec![0u8; 256],
+        public_key: vec![0u8; 256],
         nonce: [0u8; 32],
     };
 
     assert_eq!(msg.get_id(), NOW_AUTH_SRD_CHALLENGE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
-    match msg.write_to(&mut buffer){
+    match msg.write_to(&mut buffer) {
         Ok(_) => (),
         Err(_) => assert!(false),
     };
@@ -71,7 +71,7 @@ fn challenge_encoding() {
             assert_eq!(x.prime, vec![0u8; 256]);
             assert_eq!(x.public_key, vec![0u8; 256]);
             assert_eq!(x.nonce, [0u8; 32]);
-        },
+        }
         Err(_) => assert!(false),
     };
 }
@@ -83,7 +83,7 @@ fn response_encoding() {
         flags: 0,
         key_size: 256,
         reserved: 0,
-        public_key: vec!(0u8; 256),
+        public_key: vec![0u8; 256],
         nonce: [0u8; 32],
         cbt: [0u8; 32],
         mac: [0u8; 32],
@@ -92,7 +92,7 @@ fn response_encoding() {
     assert_eq!(msg.get_id(), NOW_AUTH_SRD_RESPONSE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
-    match msg.write_to(&mut buffer){
+    match msg.write_to(&mut buffer) {
         Ok(_) => (),
         Err(_) => assert!(false),
     };
@@ -115,7 +115,7 @@ fn response_encoding() {
             assert_eq!(x.nonce, [0u8; 32]);
             assert_eq!(x.cbt, [0u8; 32]);
             assert_eq!(x.mac, [0u8; 32]);
-        },
+        }
         Err(_) => assert!(false),
     };
 }
@@ -133,7 +133,7 @@ fn confirm_encoding() {
     assert_eq!(msg.get_id(), NOW_AUTH_SRD_CONFIRM_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
-    match msg.write_to(&mut buffer){
+    match msg.write_to(&mut buffer) {
         Ok(_) => (),
         Err(_) => assert!(false),
     };
@@ -153,14 +153,13 @@ fn confirm_encoding() {
             assert_eq!(x.reserved, 0);
             assert_eq!(x.cbt, [0u8; 32]);
             assert_eq!(x.mac, [0u8; 32]);
-        },
+        }
         Err(_) => assert!(false),
     };
 }
 
 #[test]
 fn delegate_encoding() {
-
     let blob = NowAuthSrdLogonBlob {
         packet_type: 1,
         flags: 0,
@@ -181,7 +180,7 @@ fn delegate_encoding() {
     assert_eq!(msg.get_id(), NOW_AUTH_SRD_DELEGATE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
-    match msg.write_to(&mut buffer){
+    match msg.write_to(&mut buffer) {
         Ok(_) => (),
         Err(_) => assert!(false),
     };
@@ -206,7 +205,7 @@ fn delegate_encoding() {
             assert_eq!(x.blob.username.to_vec(), vec![0u8; 128]);
             assert_eq!(x.blob.password.to_vec(), vec![0u8; 128]);
             assert_eq!(x.mac, [0u8; 32]);
-        },
+        }
         Err(_) => assert!(false),
     };
 }
@@ -224,7 +223,7 @@ fn result_encoding() {
     assert_eq!(msg.get_id(), NOW_AUTH_SRD_RESULT_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
-    match msg.write_to(&mut buffer){
+    match msg.write_to(&mut buffer) {
         Ok(_) => (),
         Err(_) => assert!(false),
     };
@@ -244,7 +243,7 @@ fn result_encoding() {
             assert_eq!(x.reserved, 0);
             assert_eq!(x.status, 0);
             assert_eq!(x.mac, [0u8; 32]);
-        },
+        }
         Err(_) => assert!(false),
     };
 }

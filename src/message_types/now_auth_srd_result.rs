@@ -16,7 +16,8 @@ pub struct NowAuthSrdResult {
 impl NowAuthSrdMessage for NowAuthSrdResult {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
     where
-        Self: Sized {
+        Self: Sized,
+    {
         let packet_type = buffer.read_u16::<LittleEndian>()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
         let reserved = buffer.read_u32::<LittleEndian>()?;
@@ -30,7 +31,7 @@ impl NowAuthSrdMessage for NowAuthSrdResult {
             flags,
             reserved,
             status,
-            mac
+            mac,
         })
     }
 
@@ -47,7 +48,7 @@ impl NowAuthSrdMessage for NowAuthSrdResult {
         44usize
     }
 
-    fn get_id(&self) -> u16{
+    fn get_id(&self) -> u16 {
         NOW_AUTH_SRD_RESULT_ID
     }
 }

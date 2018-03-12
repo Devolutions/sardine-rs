@@ -103,7 +103,9 @@ impl<'a> NowSrd<'a> {
     }
 
     pub fn now_srd_read_msg<T>(&self, msg: &mut T, buffer: &mut Vec<u8>) -> i32
-    where T: NowAuthSrdMessage{
+    where
+        T: NowAuthSrdMessage,
+    {
         let mut reader: &[u8] = &buffer;
         10
         /*

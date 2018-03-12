@@ -15,10 +15,11 @@ pub struct NowAuthSrdChallenge {
     pub nonce: [u8; 32],
 }
 
-impl NowAuthSrdMessage for NowAuthSrdChallenge{
+impl NowAuthSrdMessage for NowAuthSrdChallenge {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
     where
-        Self: Sized{
+        Self: Sized,
+    {
         let packet_type = buffer.read_u16::<LittleEndian>()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
         let key_size = buffer.read_u16::<LittleEndian>()?;
@@ -58,7 +59,7 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge{
         40usize + self.key_size as usize * 2
     }
 
-    fn get_id(&self) -> u16{
+    fn get_id(&self) -> u16 {
         NOW_AUTH_SRD_CHALLENGE_ID
     }
 }

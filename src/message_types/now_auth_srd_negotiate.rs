@@ -4,22 +4,23 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use message_types::{NowAuthSrdMessage, NOW_AUTH_SRD_NEGOTIATE_ID};
 
-pub struct NowAuthSrdNegotiate{
+pub struct NowAuthSrdNegotiate {
     pub packet_type: u16,
     pub flags: u16,
     pub key_size: u16,
     pub reserved: u16,
 }
 
-impl NowAuthSrdMessage for NowAuthSrdNegotiate{
+impl NowAuthSrdMessage for NowAuthSrdNegotiate {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
     where
-        Self: Sized{
-            Ok(NowAuthSrdNegotiate {
-                packet_type: buffer.read_u16::<LittleEndian>()?,
-                flags: buffer.read_u16::<LittleEndian>()?,
-                key_size: buffer.read_u16::<LittleEndian>()?,
-                reserved: buffer.read_u16::<LittleEndian>()?,
+        Self: Sized,
+    {
+        Ok(NowAuthSrdNegotiate {
+            packet_type: buffer.read_u16::<LittleEndian>()?,
+            flags: buffer.read_u16::<LittleEndian>()?,
+            key_size: buffer.read_u16::<LittleEndian>()?,
+            reserved: buffer.read_u16::<LittleEndian>()?,
         })
     }
 
@@ -35,7 +36,7 @@ impl NowAuthSrdMessage for NowAuthSrdNegotiate{
         8usize
     }
 
-    fn get_id(&self) -> u16{
+    fn get_id(&self) -> u16 {
         NOW_AUTH_SRD_NEGOTIATE_ID
     }
 }
