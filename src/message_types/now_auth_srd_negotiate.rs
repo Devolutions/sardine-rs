@@ -1,4 +1,5 @@
 use std;
+use std::io::{Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use message_types::{NowAuthSrdMessage, NOW_AUTH_SRD_NEGOTIATE_ID};
@@ -11,7 +12,7 @@ pub struct NowAuthSrdNegotiate{
 }
 
 impl NowAuthSrdMessage for NowAuthSrdNegotiate{
-    fn read_from(mut buffer: &[u8]) -> Result<Self, std::io::Error>
+    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
     where
         Self: Sized{
             Ok(NowAuthSrdNegotiate {

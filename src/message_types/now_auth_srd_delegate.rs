@@ -14,16 +14,14 @@ pub struct NowAuthSrdDelegate {
 }
 
 impl NowAuthSrdMessage for NowAuthSrdDelegate {
-    fn read_from(mut buffer: &[u8]) -> Result<Self, std::io::Error>
+    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
     where
         Self: Sized {
         let packet_type = buffer.read_u16::<LittleEndian>()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
         let reserved = buffer.read_u32::<LittleEndian>()?;
 
-        let blob = NowAuthSrdLogonBlob::read_from(&mut &buffer)?;
-
-        println!("{:?}", buffer);
+        let blob = NowAuthSrdLogonBlob::read_from(buffer)?;
 
         let mut mac = [0u8; 32];
 

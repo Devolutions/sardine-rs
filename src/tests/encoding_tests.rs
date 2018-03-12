@@ -1,3 +1,4 @@
+use std;
 use message_types::*;
 
 #[test]
@@ -20,8 +21,9 @@ fn negotiate_encoding() {
     assert_eq!(buffer, [1, 0, 0, 1, 2, 0, 1, 1]);
     assert_eq!(buffer.len(), msg.get_size());
 
+    let mut cursor = std::io::Cursor::new(buffer);
 
-    match NowAuthSrdNegotiate::read_from(&buffer) {
+    match NowAuthSrdNegotiate::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 1);
             assert_eq!(x.flags, 256);
@@ -58,7 +60,9 @@ fn challenge_encoding() {
     assert_eq!(buffer, expected);
     assert_eq!(buffer.len(), msg.get_size());
 
-    match NowAuthSrdChallenge::read_from(&buffer) {
+    let mut cursor = std::io::Cursor::new(buffer);
+
+    match NowAuthSrdChallenge::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 2);
             assert_eq!(x.flags, 0);
@@ -99,7 +103,9 @@ fn response_encoding() {
     assert_eq!(buffer, expected);
     assert_eq!(buffer.len(), msg.get_size());
 
-    match NowAuthSrdResponse::read_from(&buffer) {
+    let mut cursor = std::io::Cursor::new(buffer);
+
+    match NowAuthSrdResponse::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 3);
             assert_eq!(x.flags, 0);
@@ -138,7 +144,9 @@ fn confirm_encoding() {
     assert_eq!(buffer, expected);
     assert_eq!(buffer.len(), msg.get_size());
 
-    match NowAuthSrdConfirm::read_from(&buffer) {
+    let mut cursor = std::io::Cursor::new(buffer);
+
+    match NowAuthSrdConfirm::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 4);
             assert_eq!(x.flags, 0);
@@ -183,18 +191,20 @@ fn delegate_encoding() {
     expected.append(&mut vec![0u8; 256]);
     expected.append(&mut vec![0u8; 32]);
 
-    //assert_eq!(buffer, expected);
-    //assert_eq!(buffer.len(), msg.get_size());
+    assert_eq!(buffer, expected);
+    assert_eq!(buffer.len(), msg.get_size());
 
-    match NowAuthSrdDelegate::read_from(&buffer) {
+    let mut cursor = std::io::Cursor::new(buffer);
+
+    match NowAuthSrdDelegate::read_from(&mut cursor) {
         Ok(x) => {
-            //assert_eq!(x.packet_type, 5);
-            //assert_eq!(x.flags, 0);
-            //assert_eq!(x.reserved, 0);
-            //assert_eq!(x.blob.packet_type, 1);
-            //assert_eq!(x.blob.size, 256);
-            //assert_eq!(x.blob.username, [0u8; 128]);
-            //assert_eq!(x.blob.password, [0u8; 128]);
+            assert_eq!(x.packet_type, 5);
+            assert_eq!(x.flags, 0);
+            assert_eq!(x.reserved, 0);
+            assert_eq!(x.blob.packet_type, 1);
+            assert_eq!(x.blob.size, 256);
+            assert_eq!(x.blob.username.to_vec(), vec![0u8; 128]);
+            assert_eq!(x.blob.password.to_vec(), vec![0u8; 128]);
             assert_eq!(x.mac, [0u8; 32]);
         },
         Err(_) => assert!(false),
@@ -225,7 +235,9 @@ fn result_encoding() {
     assert_eq!(buffer, expected);
     assert_eq!(buffer.len(), msg.get_size());
 
-    match NowAuthSrdResult::read_from(&buffer) {
+    let mut cursor = std::io::Cursor::new(buffer);
+
+    match NowAuthSrdResult::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 6);
             assert_eq!(x.flags, 0);
