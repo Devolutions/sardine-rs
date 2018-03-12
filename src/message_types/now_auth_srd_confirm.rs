@@ -4,6 +4,7 @@ use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use message_types::{NowAuthSrdMessage, NOW_AUTH_SRD_CONFIRM_ID};
+use Result;
 
 pub struct NowAuthSrdConfirm {
     pub packet_type: u16,
@@ -14,7 +15,7 @@ pub struct NowAuthSrdConfirm {
 }
 
 impl NowAuthSrdMessage for NowAuthSrdConfirm {
-    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
+    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
     where
         Self: Sized,
     {
@@ -37,7 +38,7 @@ impl NowAuthSrdMessage for NowAuthSrdConfirm {
         })
     }
 
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
+    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
         buffer.write_u16::<LittleEndian>(self.packet_type)?;
         buffer.write_u16::<LittleEndian>(self.flags)?;
         buffer.write_u32::<LittleEndian>(self.reserved)?;

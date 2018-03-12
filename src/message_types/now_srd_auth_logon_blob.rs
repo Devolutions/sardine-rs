@@ -4,6 +4,7 @@ use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use message_types::{NowAuthSrdMessage, NOW_AUTH_SRD_LOGON_BLOB_ID};
+use Result;
 
 pub struct NowAuthSrdLogonBlob {
     pub packet_type: u8,
@@ -14,7 +15,7 @@ pub struct NowAuthSrdLogonBlob {
 }
 
 impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
-    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self, std::io::Error>
+    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
     where
         Self: Sized,
     {
@@ -37,7 +38,7 @@ impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
         })
     }
 
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
+    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
         buffer.write_u8(self.packet_type)?;
         buffer.write_u8(self.flags)?;
         buffer.write_u16::<LittleEndian>(self.size)?;

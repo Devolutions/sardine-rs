@@ -1,4 +1,4 @@
-use std;
+use Result;
 use message_types::NowAuthSrdMessage;
 
 pub struct NowSrd<'a> {
@@ -67,39 +67,9 @@ impl<'a> NowSrd<'a> {
         &self,
         msg: &NowAuthSrdMessage,
         buffer: &mut Vec<u8>,
-    ) -> Result<(), std::io::Error> {
+    ) -> Result<()> {
         msg.write_to(buffer)?;
         Ok(())
-
-        /*
-
-        let header: &NowAuthSrdHeader = &msg.header;
-
-        // Returns an error if the type is not expected
-        if header.packet_type != packet_type as u16 {
-            return -1;
-        }
-
-        match header.packet_type as u8 {
-            NOW_AUTH_SRD_NEGOTIATE_ID => {
-                //let stream = BufStream::new(header);
-                let mut bytes: Vec<u8> = Vec::new();
-                //let mut slice =  &bytes;
-                if header.write_to(&mut bytes).is_err() {
-                    return -1;
-                };
-                if &bytes[0..2] != b"\x01\x00" {
-                    return -1;
-                }
-            }
-            NOW_AUTH_SRD_CHALLENGE_ID => {}
-            _ => {
-                // Returns if the type is unknown
-                return -1;
-            }
-        }
-        10
-        */
     }
 
     pub fn now_srd_read_msg<T>(&self, msg: &mut T, buffer: &mut Vec<u8>) -> i32
