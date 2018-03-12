@@ -4,14 +4,14 @@ use std::fmt;
 #[derive(Debug)]
 pub enum NowAuthSrdError {
     Io(std::io::Error),
-    BadSequence(String),
+    BadSequence,
 }
 
 impl fmt::Display for NowAuthSrdError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             &NowAuthSrdError::Io(ref error) => error.fmt(f),
-            &NowAuthSrdError::BadSequence(ref desc) => write!(f, "Sequence error: {}", desc),
+            &NowAuthSrdError::BadSequence => write!(f, "Sequence error"),
         }
     }
 }
@@ -20,7 +20,7 @@ impl std::error::Error for NowAuthSrdError {
     fn description(&self) -> &str {
         match *self {
             NowAuthSrdError::Io(ref error) => error.description(),
-            NowAuthSrdError::BadSequence(_) => "Unexpected packet received!",
+            NowAuthSrdError::BadSequence => "Unexpected packet received!",
         }
     }
 }

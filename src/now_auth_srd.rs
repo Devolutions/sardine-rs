@@ -1,12 +1,17 @@
+use std;
 use Result;
-use message_types::NowAuthSrdMessage;
+use now_auth_srd_errors::NowAuthSrdError;
+use message_types::{NowAuthSrdMessage, NowAuthSrdNegotiate, NowAuthSrdChallenge, NowAuthSrdResponse,
+                    NowAuthSrdConfirm, NowAuthSrdDelegate, NowAuthSrdResult};
+use message_types::{NOW_AUTH_SRD_CHALLENGE_ID, NOW_AUTH_SRD_CONFIRM_ID, NOW_AUTH_SRD_DELEGATE_ID,
+                    NOW_AUTH_SRD_NEGOTIATE_ID, NOW_AUTH_SRD_RESPONSE_ID, NOW_AUTH_SRD_RESULT_ID};
 
 pub struct NowSrd<'a> {
     is_server: bool,
     //NowSrdCallbacks cbs;
     keys: &'a [u8],
     key_size: u16,
-    seq_num: u32,
+    seq_num: u16,
     username: &'a str,
     password: &'a str,
 
@@ -37,7 +42,7 @@ impl<'a> NowSrd<'a> {
             is_server,
             keys: &[0; 32],
             key_size: 0,
-            seq_num: if is_server { 2 } else { 1 },
+            seq_num: 1,
             username: "hello",
             password: "world!",
 
@@ -63,49 +68,28 @@ impl<'a> NowSrd<'a> {
         }
     }
 
-    pub fn now_srd_write_msg(
-        &self,
-        msg: &NowAuthSrdMessage,
-        buffer: &mut Vec<u8>,
-    ) -> Result<()> {
-        msg.write_to(buffer)?;
-        Ok(())
+    pub fn now_srd_write_msg(&mut self, msg: &NowAuthSrdMessage, buffer: &mut Vec<u8>) -> Result<()> {
+        if msg.get_id() == self.seq_num {
+            msg.write_to(buffer)?;
+            self.seq_num += 1;
+            Ok(())
+        } else {
+            Err(NowAuthSrdError::BadSequence)
+        }
     }
 
-    pub fn now_srd_read_msg<T>(&self, msg: &mut T, buffer: &mut Vec<u8>) -> i32
+    pub fn now_srd_read_msg<T: NowAuthSrdMessage>(&mut self, buffer: Vec<u8>) -> Result<T>
     where
         T: NowAuthSrdMessage,
     {
-        let mut reader: &[u8] = &buffer;
-        10
-        /*
-        let nstatus: u32 = 0;
-        let header: &NowAuthSrdHeader = &msg.header;
-
-        // Returns an error if the type is not expected
-        if header.packet_type != packet_type as u16 {
-            return -1;
+        let mut reader = std::io::Cursor::new(buffer);
+        let packet = T::read_from(&mut reader)?;
+        if packet.get_id() == self.seq_num {
+            self.seq_num += 1;
+            Ok(packet)
         }
-
-        match header.packet_type as u8 {
-            NOW_AUTH_SRD_NEGOTIATE_ID => {
-                //let stream = BufStream::new(header);
-                let mut bytes: Vec<u8> = Vec::new();
-                //let mut slice =  &bytes;
-                if header.write_to(&mut bytes).is_err() {
-                    return -1;
-                };
-                if &bytes[0..2] != b"\x01\x00" {
-                    return -1;
-                }
-            }
-            NOW_AUTH_SRD_CHALLENGE_ID => {}
-            _ => {
-                // Returns if the type is unknown
-                return -1;
-            }
+        else {
+            Err(NowAuthSrdError::BadSequence)
         }
-        10
-        */
     }
 }
