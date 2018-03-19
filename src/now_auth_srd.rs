@@ -2,10 +2,8 @@ use std;
 use std::ffi::CStr;
 use Result;
 use now_auth_srd_errors::NowAuthSrdError;
-use message_types::{NowAuthSrdChallenge, NowAuthSrdConfirm, NowAuthSrdDelegate, NowAuthSrdMessage,
-                    NowAuthSrdNegotiate, NowAuthSrdResponse, NowAuthSrdResult};
-use message_types::{NOW_AUTH_SRD_CHALLENGE_ID, NOW_AUTH_SRD_CONFIRM_ID, NOW_AUTH_SRD_DELEGATE_ID,
-                    NOW_AUTH_SRD_NEGOTIATE_ID, NOW_AUTH_SRD_RESPONSE_ID, NOW_AUTH_SRD_RESULT_ID};
+use message_types::*;
+use message_types::now_auth_srd_id::*;
 
 pub struct NowSrd {
     is_server: bool,

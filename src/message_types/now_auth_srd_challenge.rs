@@ -3,7 +3,8 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{NowAuthSrdMessage, NOW_AUTH_SRD_CHALLENGE_ID};
+use message_types::NowAuthSrdMessage;
+use message_types::now_auth_srd_id::NOW_AUTH_SRD_CHALLENGE_ID;
 use Result;
 
 pub struct NowAuthSrdChallenge {

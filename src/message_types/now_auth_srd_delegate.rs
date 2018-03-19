@@ -3,7 +3,8 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{NowAuthSrdLogonBlob, NowAuthSrdMessage, NOW_AUTH_SRD_DELEGATE_ID};
+use message_types::{NowAuthSrdLogonBlob, NowAuthSrdMessage};
+use message_types::now_auth_srd_id::NOW_AUTH_SRD_DELEGATE_ID;
 use Result;
 
 pub struct NowAuthSrdDelegate {

@@ -1,5 +1,6 @@
 use std;
 use message_types::*;
+use message_types::now_auth_srd_id::*;
 
 #[test]
 fn negotiate_encoding() {
