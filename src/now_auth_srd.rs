@@ -10,7 +10,8 @@ use message_types::{NOW_AUTH_SRD_CHALLENGE_ID, NOW_AUTH_SRD_CONFIRM_ID, NOW_AUTH
 pub struct NowSrd {
     is_server: bool,
     //NowSrdCallbacks cbs;
-    keys: Vec<u8>,
+    keys: [Vec<u8>; 2],
+    key_size: u32,
     seq_num: u16,
     username: String,
     password: String,
@@ -38,7 +39,8 @@ impl NowSrd {
     pub fn new(is_server: bool) -> NowSrd {
         NowSrd {
             is_server,
-            keys: Vec::new(),
+            keys: [Vec::new(), Vec::new()],
+            key_size: 256,
             seq_num: 1,
             username: "".to_string(),
             password: "".to_string(),
@@ -82,12 +84,14 @@ impl NowSrd {
         Ok(())
     }
 
-    pub fn authenticate(
-        &mut self,
-        input_data: &mut Vec<u8>,
-        output_data: &mut Vec<u8>,
-    ) -> Result<bool> {
-        Ok(true)
+    pub fn set_key_size(&mut self, key_size: u32) -> Result<()> {
+        match key_size {
+            256 | 512 | 1024 => {
+                self.key_size = key_size;
+                Ok(())
+            }
+            _ => Err(NowAuthSrdError::InvalidKeySize),
+        }
     }
 
     pub fn write_msg(&mut self, msg: &NowAuthSrdMessage, buffer: &mut Vec<u8>) -> Result<()> {
@@ -112,5 +116,129 @@ impl NowSrd {
         } else {
             Err(NowAuthSrdError::BadSequence)
         }
+    }
+
+    pub fn authenticate(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<bool> {
+        if self.is_server {
+            match self.seq_num {
+                NOW_AUTH_SRD_NEGOTIATE_ID => self.server_negotiate(input_data, output_data)?,
+                NOW_AUTH_SRD_CHALLENGE_ID => self.server_challenge(input_data, output_data)?,
+                NOW_AUTH_SRD_RESPONSE_ID => self.server_response(input_data, output_data)?,
+                NOW_AUTH_SRD_CONFIRM_ID => self.server_confirm(input_data, output_data)?,
+                NOW_AUTH_SRD_DELEGATE_ID => self.server_delegate(input_data, output_data)?,
+                NOW_AUTH_SRD_RESULT_ID => {
+                    self.server_result(input_data, output_data)?;
+                    return Ok(true);
+                }
+                _ => return Err(NowAuthSrdError::BadSequence),
+            }
+        } else {
+            match self.seq_num {
+                NOW_AUTH_SRD_NEGOTIATE_ID => self.client_negotiate(input_data, output_data)?,
+                NOW_AUTH_SRD_CHALLENGE_ID => self.client_challenge(input_data, output_data)?,
+                NOW_AUTH_SRD_RESPONSE_ID => self.client_response(input_data, output_data)?,
+                NOW_AUTH_SRD_CONFIRM_ID => self.client_confirm(input_data, output_data)?,
+                NOW_AUTH_SRD_DELEGATE_ID => self.client_delegate(input_data, output_data)?,
+                NOW_AUTH_SRD_RESULT_ID => {
+                    self.client_result(input_data, output_data)?;
+                    return Ok(true);
+                }
+                _ => return Err(NowAuthSrdError::BadSequence),
+            }
+        }
+        self.seq_num += 1;
+        Ok(false)
+    }
+
+    fn server_negotiate(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn client_negotiate(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn server_challenge(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn client_challenge(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn server_response(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn client_response(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn server_confirm(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn client_confirm(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn server_delegate(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn client_delegate(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn server_result(&mut self, input_data: &mut Vec<u8>, output_data: &mut Vec<u8>) -> Result<()> {
+        Ok(())
+    }
+
+    fn client_result(&mut self, input_data: &mut Vec<u8>, output_data: &mut Vec<u8>) -> Result<()> {
+        Ok(())
     }
 }

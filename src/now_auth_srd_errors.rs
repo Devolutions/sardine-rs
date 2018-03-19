@@ -5,6 +5,7 @@ use std::fmt;
 pub enum NowAuthSrdError {
     Io(std::io::Error),
     BadSequence,
+    InvalidKeySize,
 }
 
 impl fmt::Display for NowAuthSrdError {
@@ -12,6 +13,7 @@ impl fmt::Display for NowAuthSrdError {
         match self {
             &NowAuthSrdError::Io(ref error) => error.fmt(f),
             &NowAuthSrdError::BadSequence => write!(f, "Sequence error"),
+            &NowAuthSrdError::InvalidKeySize => write!(f, "Key Size error"),
         }
     }
 }
@@ -21,6 +23,7 @@ impl std::error::Error for NowAuthSrdError {
         match *self {
             NowAuthSrdError::Io(ref error) => error.description(),
             NowAuthSrdError::BadSequence => "Unexpected packet received!",
+            NowAuthSrdError::InvalidKeySize => "Key size must be 256, 512 or 1024",
         }
     }
 }
