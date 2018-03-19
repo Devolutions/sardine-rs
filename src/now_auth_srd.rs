@@ -1,26 +1,24 @@
 use std;
+use std::ffi::CStr;
 use Result;
 use now_auth_srd_errors::NowAuthSrdError;
-use message_types::{NowAuthSrdMessage, NowAuthSrdNegotiate, NowAuthSrdChallenge, NowAuthSrdResponse,
-                    NowAuthSrdConfirm, NowAuthSrdDelegate, NowAuthSrdResult};
+use message_types::{NowAuthSrdChallenge, NowAuthSrdConfirm, NowAuthSrdDelegate, NowAuthSrdMessage,
+                    NowAuthSrdNegotiate, NowAuthSrdResponse, NowAuthSrdResult};
 use message_types::{NOW_AUTH_SRD_CHALLENGE_ID, NOW_AUTH_SRD_CONFIRM_ID, NOW_AUTH_SRD_DELEGATE_ID,
                     NOW_AUTH_SRD_NEGOTIATE_ID, NOW_AUTH_SRD_RESPONSE_ID, NOW_AUTH_SRD_RESULT_ID};
 
-pub struct NowSrd<'a> {
+pub struct NowSrd {
     is_server: bool,
     //NowSrdCallbacks cbs;
-    keys: &'a [u8],
-    key_size: u16,
+    keys: Vec<u8>,
     seq_num: u16,
-    username: &'a str,
-    password: &'a str,
+    username: String,
+    password: String,
 
-    cert_data: &'a [u8],
-    cert_size: usize,
+    cert_data: Vec<u8>,
     cbt_level: u32,
 
-    buffers: [&'a [u8]; 6],
-
+    //buffers: [&'a [u8]; 6],
     client_nonce: [u8; 32],
     server_nonce: [u8; 32],
     delegation_key: [u8; 32],
@@ -36,22 +34,19 @@ pub struct NowSrd<'a> {
     secret_key: Vec<u8>,
 }
 
-impl<'a> NowSrd<'a> {
-    pub fn new(is_server: bool) -> NowSrd<'a> {
+impl NowSrd {
+    pub fn new(is_server: bool) -> NowSrd {
         NowSrd {
             is_server,
-            keys: &[0; 32],
-            key_size: 0,
+            keys: Vec::new(),
             seq_num: 1,
-            username: "hello",
-            password: "world!",
+            username: "".to_string(),
+            password: "".to_string(),
 
-            cert_data: &[0; 32],
-            cert_size: 0,
+            cert_data: Vec::new(),
             cbt_level: 0,
 
-            buffers: [&[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32]],
-
+            //buffers: [&[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32]],
             client_nonce: [0; 32],
             server_nonce: [0; 32],
             delegation_key: [0; 32],
@@ -68,7 +63,34 @@ impl<'a> NowSrd<'a> {
         }
     }
 
-    pub fn now_srd_write_msg(&mut self, msg: &NowAuthSrdMessage, buffer: &mut Vec<u8>) -> Result<()> {
+    pub fn get_username(&self) -> String {
+        self.username.clone()
+    }
+
+    pub fn get_password(&self) -> String {
+        self.password.clone()
+    }
+
+    pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
+        self.cert_data = buffer;
+        Ok(())
+    }
+
+    pub fn set_credentials(&mut self, username: String, password: String) -> Result<()> {
+        self.username = username;
+        self.password = password;
+        Ok(())
+    }
+
+    pub fn authenticate(
+        &mut self,
+        input_data: &mut Vec<u8>,
+        output_data: &mut Vec<u8>,
+    ) -> Result<bool> {
+        Ok(true)
+    }
+
+    pub fn write_msg(&mut self, msg: &NowAuthSrdMessage, buffer: &mut Vec<u8>) -> Result<()> {
         if msg.get_id() == self.seq_num {
             msg.write_to(buffer)?;
             self.seq_num += 1;
@@ -78,7 +100,7 @@ impl<'a> NowSrd<'a> {
         }
     }
 
-    pub fn now_srd_read_msg<T: NowAuthSrdMessage>(&mut self, buffer: Vec<u8>) -> Result<T>
+    pub fn read_msg<T: NowAuthSrdMessage>(&mut self, buffer: Vec<u8>) -> Result<T>
     where
         T: NowAuthSrdMessage,
     {
@@ -87,8 +109,7 @@ impl<'a> NowSrd<'a> {
         if packet.get_id() == self.seq_num {
             self.seq_num += 1;
             Ok(packet)
-        }
-        else {
+        } else {
             Err(NowAuthSrdError::BadSequence)
         }
     }
