@@ -1,8 +1,14 @@
 use std;
 use std::ffi::CStr;
+
 use rand;
 use rand::{OsRng, Rng};
+
 use num::bigint::{BigUint, RandBigInt};
+
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
+
 use Result;
 use now_auth_srd_errors::NowAuthSrdError;
 use message_types::*;
@@ -31,8 +37,6 @@ pub struct NowSrd {
     generator: [u8; 2],
 
     prime: Vec<u8>,
-    peer_key: Vec<u8>,
-    public_key: Vec<u8>,
     private_key: Vec<u8>,
     secret_key: Vec<u8>,
 
@@ -62,8 +66,6 @@ impl NowSrd {
             generator: [0; 2],
 
             prime: Vec::new(),
-            peer_key: Vec::new(),
-            public_key: Vec::new(),
             private_key: Vec::new(),
             secret_key: Vec::new(),
 
@@ -174,18 +176,17 @@ impl NowSrd {
         let public_key = g.modpow(&private_key, &p);
 
         self.private_key = private_key.to_bytes_be();
-        self.public_key = public_key.to_bytes_be();
 
         let mut nonce = [0u8; 32];
         self.rng.fill_bytes(&mut nonce);
 
-        self.server_nonce = nonce.clone();
+        self.server_nonce = nonce;
 
         let out_packet = NowAuthSrdChallenge::new(
             in_packet.key_size,
-            self.generator.clone(),
+            self.generator,
             self.prime.clone(),
-            self.public_key.clone(),
+            public_key.to_bytes_be(),
             nonce,
         );
         self.write_msg(&out_packet, &mut output_data);
@@ -193,6 +194,34 @@ impl NowSrd {
     }
 
     fn client_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+        let in_packet = self.read_msg::<NowAuthSrdChallenge>(input_data)?;
+
+        let g = BigUint::from_bytes_be(&in_packet.generator);
+        let p = BigUint::from_bytes_be(&in_packet.prime);
+        let private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
+        let public_key = g.modpow(&private_key, &p);
+
+        let mut nonce = [0u8; 32];
+        self.rng.fill_bytes(&mut nonce);
+
+        self.client_nonce = nonce;
+        self.server_nonce = in_packet.nonce;
+        self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
+            .modpow(&private_key, &p)
+            .to_bytes_be();
+
+        self.derive_keys();
+
+        //TODO: cbt and mac
+
+        /*let out_packet = NowAuthSrdResponse::new(
+            in_packet.key_size,
+            public_key.to_bytes_be(),
+            nonce,
+            cbt,
+            mac,
+        );*/
+
         Ok(())
     }
 
@@ -239,5 +268,27 @@ impl NowSrd {
             }
             _ => Err(NowAuthSrdError::InvalidKeySize),
         }
+    }
+
+    fn derive_keys(&mut self) {
+        let mut hash = Sha256::new();
+        hash.input(&self.client_nonce);
+        hash.input(&self.secret_key);
+        hash.input(&self.server_nonce);
+
+        hash.result(&mut self.delegation_key);
+
+        hash = Sha256::new();
+        hash.input(&self.client_nonce);
+        hash.input(&self.secret_key);
+        hash.input(&self.server_nonce);
+
+        hash.result(&mut self.integrity_key);
+
+        hash = Sha256::new();
+        hash.input(&self.client_nonce);
+        hash.input(&self.server_nonce);
+
+        hash.result(&mut self.iv);
     }
 }
