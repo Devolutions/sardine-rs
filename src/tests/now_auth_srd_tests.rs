@@ -57,8 +57,8 @@ const TEST_PASSWORD: &'static str = "Dummy123";
 
 #[test]
 fn good_login() {
-    let mut client: NowSrd = NowSrd::new(false);
-    let mut server: NowSrd = NowSrd::new(true);
+    let mut client: NowSrd = NowSrd::new(false).unwrap();
+    let mut server: NowSrd = NowSrd::new(true).unwrap();
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();

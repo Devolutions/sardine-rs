@@ -65,3 +65,23 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge {
         NOW_AUTH_SRD_CHALLENGE_ID
     }
 }
+
+impl NowAuthSrdChallenge {
+    pub fn new(
+        key_size: u16,
+        g_data: [u8; 2],
+        p_data: Vec<u8>,
+        public_key: Vec<u8>,
+        nonce: [u8; 32],
+    ) -> NowAuthSrdChallenge {
+        NowAuthSrdChallenge {
+            packet_type: NOW_AUTH_SRD_CHALLENGE_ID,
+            flags: 0,
+            key_size,
+            generator: g_data,
+            prime: p_data.to_vec(),
+            public_key: p_data.to_vec(), //TODO
+            nonce: [0u8; 32],            //TODO
+        }
+    }
+}

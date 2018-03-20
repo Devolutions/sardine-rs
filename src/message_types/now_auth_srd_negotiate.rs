@@ -41,3 +41,14 @@ impl NowAuthSrdMessage for NowAuthSrdNegotiate {
         NOW_AUTH_SRD_NEGOTIATE_ID
     }
 }
+
+impl NowAuthSrdNegotiate {
+    pub fn new(key_size: u16) -> NowAuthSrdNegotiate {
+        NowAuthSrdNegotiate {
+            packet_type: NOW_AUTH_SRD_NEGOTIATE_ID,
+            flags: 0,
+            key_size,
+            reserved: 0,
+        }
+    }
+}
