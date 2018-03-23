@@ -53,7 +53,6 @@ impl NowSrd {
 
             cert_data: None,
 
-            //buffers: [&[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32]],
             client_nonce: [0; 32],
             server_nonce: [0; 32],
             delegation_key: [0; 32],
@@ -147,9 +146,8 @@ impl NowSrd {
             match self.seq_num {
                 0 => self.server_0(input_data, output_data)?,
                 1 => self.server_1(input_data, output_data)?,
-                2 => self.server_2(input_data, output_data)?,
-                3 => {
-                    self.server_3(input_data, output_data)?;
+                2 => {
+                    self.server_2(input_data, output_data)?;
                     return Ok(true);
                 }
                 _ => return Err(NowAuthSrdError::BadSequence),
@@ -159,9 +157,8 @@ impl NowSrd {
                 0 => self.client_0(output_data)?,
                 1 => self.client_1(input_data, output_data)?,
                 2 => self.client_2(input_data, output_data)?,
-                3 => self.client_3(input_data, output_data)?,
-                4 => {
-                    self.client_4(input_data, output_data)?;
+                3 => {
+                    self.client_3(input_data, output_data)?;
                     return Ok(true);
                 }
                 _ => return Err(NowAuthSrdError::BadSequence),
@@ -302,14 +299,6 @@ impl NowSrd {
     }
 
     fn client_3(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
-        Ok(())
-    }
-
-    fn server_3(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
-        Ok(())
-    }
-
-    fn client_4(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         Ok(())
     }
 
