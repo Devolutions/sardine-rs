@@ -74,7 +74,7 @@ impl NowAuthSrdChallenge {
         public_key: Vec<u8>,
         nonce: [u8; 32],
     ) -> NowAuthSrdChallenge {
-        let mut generator = [0u8;2];
+        let mut generator = [0u8; 2];
         generator.copy_from_slice(g_data);
         NowAuthSrdChallenge {
             packet_type: NOW_AUTH_SRD_CHALLENGE_ID,

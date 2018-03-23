@@ -18,15 +18,16 @@ use message_types::now_auth_srd_id::*;
 use dh_params::{SrdDhParams, SRD_DH_PARAMS};
 
 pub struct NowSrd {
+    password_callback: Option<fn(String) -> Result<()>>,
+
     is_server: bool,
-    //NowSrdCallbacks cbs;
     keys: [Vec<u8>; 2],
     key_size: u16,
     seq_num: u16,
     username: String,
     password: String,
 
-    cert_data: Vec<u8>,
+    cert_data: Option<Vec<u8>>,
     cbt_level: u32,
 
     //buffers: [&'a [u8]; 6],
@@ -48,6 +49,8 @@ pub struct NowSrd {
 impl NowSrd {
     pub fn new(is_server: bool) -> Result<NowSrd> {
         Ok(NowSrd {
+            password_callback: None,
+
             is_server,
             keys: [Vec::new(), Vec::new()],
             key_size: 256,
@@ -55,7 +58,7 @@ impl NowSrd {
             username: "".to_string(),
             password: "".to_string(),
 
-            cert_data: Vec::new(),
+            cert_data: None,
             cbt_level: 0,
 
             //buffers: [&[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32]],
@@ -84,7 +87,7 @@ impl NowSrd {
     }
 
     pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
-        self.cert_data = buffer;
+        self.cert_data = Some(buffer);
         Ok(())
     }
 
@@ -219,7 +222,12 @@ impl NowSrd {
         let mut hash = Sha256::new();
         let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
         hmac.input(&self.client_nonce);
-        hmac.input(&self.cert_data);
+
+        match self.cert_data {
+            None => return Err(NowAuthSrdError::InvalidCert),
+            Some(ref c) => hmac.input(c),
+        }
+
         let mut cbt: [u8; 32] = [0u8; 32];
         hmac.raw_result(&mut cbt);
 

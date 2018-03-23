@@ -73,7 +73,13 @@ impl NowAuthSrdMessage for NowAuthSrdResponse {
 }
 
 impl NowAuthSrdResponse {
-    pub fn new(key_size: u16, public_key: Vec<u8>, nonce: [u8;32], cbt: [u8; 32], integrity_key: [u8; 32]) -> Result<Self> {
+    pub fn new(
+        key_size: u16,
+        public_key: Vec<u8>,
+        nonce: [u8; 32],
+        cbt: [u8; 32],
+        integrity_key: [u8; 32],
+    ) -> Result<Self> {
         let mut response = NowAuthSrdResponse {
             packet_type: NOW_AUTH_SRD_RESPONSE_ID,
             flags: 0x03,
@@ -88,7 +94,7 @@ impl NowAuthSrdResponse {
         Ok(response)
     }
 
-    fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()>{
+    fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {
         let mut hash = Sha256::new();
         let mut hmac = Hmac::<Sha256>::new(hash, &integrity_key);
 
@@ -111,8 +117,7 @@ impl NowAuthSrdResponse {
 
         if mac == self.mac {
             Ok(())
-        }
-        else {
+        } else {
             Err(NowAuthSrdError::InvalidMac)
         }
     }

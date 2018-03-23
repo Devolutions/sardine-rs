@@ -7,6 +7,7 @@ pub enum NowAuthSrdError {
     BadSequence,
     InvalidKeySize,
     InvalidMac,
+    InvalidCert,
 }
 
 impl fmt::Display for NowAuthSrdError {
@@ -16,6 +17,7 @@ impl fmt::Display for NowAuthSrdError {
             &NowAuthSrdError::BadSequence => write!(f, "Sequence error"),
             &NowAuthSrdError::InvalidKeySize => write!(f, "Key Size error"),
             &NowAuthSrdError::InvalidMac => write!(f, "MAC error"),
+            &NowAuthSrdError::InvalidCert => write!(f, "Certificate error"),
         }
     }
 }
@@ -27,6 +29,7 @@ impl std::error::Error for NowAuthSrdError {
             NowAuthSrdError::BadSequence => "Unexpected packet received!",
             NowAuthSrdError::InvalidKeySize => "Key size must be 256, 512 or 1024",
             NowAuthSrdError::InvalidMac => "MAC is invalid",
+            NowAuthSrdError::InvalidCert => "Cert is invalid or absent",
         }
     }
 }
