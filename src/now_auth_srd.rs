@@ -18,7 +18,7 @@ use message_types::now_auth_srd_id::*;
 use dh_params::{SrdDhParams, SRD_DH_PARAMS};
 
 pub struct NowSrd {
-    password_callback: Option<fn(String) -> Result<()>>,
+    credentials_callback: Option<fn(&String, &String) -> bool>,
 
     is_server: bool,
     keys: [Vec<u8>; 2],
@@ -49,7 +49,7 @@ pub struct NowSrd {
 impl NowSrd {
     pub fn new(is_server: bool) -> Result<NowSrd> {
         Ok(NowSrd {
-            password_callback: None,
+            credentials_callback: None,
 
             is_server,
             keys: [Vec::new(), Vec::new()],
@@ -84,6 +84,11 @@ impl NowSrd {
 
     pub fn get_password(&self) -> String {
         self.password.clone()
+    }
+
+    pub fn set_credentials_callback(&mut self, callback: fn(&String, &String) -> bool)
+    {
+        self.credentials_callback = Some(callback)
     }
 
     pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {

@@ -55,6 +55,10 @@ static TEST_CERT_DATA: &'static [u8] =
 const TEST_USERNAME: &'static str = "john.doe";
 const TEST_PASSWORD: &'static str = "Dummy123";
 
+fn verify_credentials_callback(username: &String, password: &String) -> bool {
+    *username == TEST_USERNAME.to_string() && *password == TEST_PASSWORD.to_string()
+}
+
 #[test]
 fn good_login() {
     let mut client: NowSrd = NowSrd::new(false).unwrap();
@@ -69,6 +73,8 @@ fn good_login() {
     client
         .set_credentials(TEST_USERNAME.to_string(), TEST_PASSWORD.to_string())
         .unwrap();
+
+    server.set_credentials_callback(verify_credentials_callback);
 
     let mut client_status: bool = false;
     let mut server_status: bool = false;
