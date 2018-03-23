@@ -12,21 +12,18 @@ use crypto::sha2::Sha256;
 use Result;
 use now_auth_srd_errors::NowAuthSrdError;
 use message_types::*;
-use message_types::now_auth_srd_id::*;
-use dh_params::{SrdDhParams, SRD_DH_PARAMS};
+use dh_params::{SRD_DH_PARAMS};
 
 pub struct NowSrd {
     credentials_callback: Option<fn(&String, &String) -> bool>,
 
     is_server: bool,
-    keys: [Vec<u8>; 2],
     key_size: u16,
     seq_num: u16,
     username: String,
     password: String,
 
     cert_data: Option<Vec<u8>>,
-    cbt_level: u32,
 
     client_nonce: [u8; 32],
     server_nonce: [u8; 32],
@@ -49,14 +46,12 @@ impl NowSrd {
             credentials_callback: None,
 
             is_server,
-            keys: [Vec::new(), Vec::new()],
             key_size: 256,
             seq_num: 0,
             username: "".to_string(),
             password: "".to_string(),
 
             cert_data: None,
-            cbt_level: 0,
 
             //buffers: [&[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32], &[0; 32]],
             client_nonce: [0; 32],
@@ -161,7 +156,7 @@ impl NowSrd {
             }
         } else {
             match self.seq_num {
-                0 => self.client_0(input_data, output_data)?,
+                0 => self.client_0(output_data)?,
                 1 => self.client_1(input_data, output_data)?,
                 2 => self.client_2(input_data, output_data)?,
                 3 => self.client_3(input_data, output_data)?,
@@ -177,7 +172,7 @@ impl NowSrd {
     }
 
     // Client negotiate
-    fn client_0(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+    fn client_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
         let msg = NowAuthSrdNegotiate::new(self.key_size);
         self.write_msg(&msg, &mut output_data)?;
         Ok(())
@@ -225,7 +220,7 @@ impl NowSrd {
         self.derive_keys();
 
         // Generate cbt
-        let mut hash = Sha256::new();
+        let hash = Sha256::new();
         let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
         hmac.input(&self.client_nonce);
 

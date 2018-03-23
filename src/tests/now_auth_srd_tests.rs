@@ -1,6 +1,4 @@
-use Result;
 use now_auth_srd::NowSrd;
-use now_auth_srd_errors::NowAuthSrdError;
 
 static TEST_CERT_DATA: &'static [u8] =
     b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x03\x02\x01\x02\x02\x10\x16

@@ -5,7 +5,6 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crypto::mac::Mac;
 use crypto::hmac::Hmac;
-use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
 use message_types::NowAuthSrdMessage;
@@ -75,7 +74,7 @@ impl NowAuthSrdConfirm {
     }
 
     fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {
-        let mut hash = Sha256::new();
+        let hash = Sha256::new();
         let mut hmac = Hmac::<Sha256>::new(hash, &integrity_key);
 
         let mut buffer = Vec::new();
@@ -95,10 +94,10 @@ impl NowAuthSrdConfirm {
     }
 
     pub fn verify_mac(&self, integrity_key: &[u8]) -> Result<()> {
-        let mut hash = Sha256::new();
+        let hash = Sha256::new();
         let mut hmac = Hmac::<Sha256>::new(hash, &integrity_key);
         let mut buffer = Vec::new();
-        self.write_inner_buffer(&mut buffer);
+        self.write_inner_buffer(&mut buffer)?;
         hmac.input(&buffer);
 
         let mut mac: [u8; 32] = [0u8; 32];
