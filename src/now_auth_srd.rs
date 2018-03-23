@@ -6,6 +6,8 @@ use rand::{OsRng, Rng};
 
 use num::bigint::{BigUint, RandBigInt};
 
+use crypto::mac::{Mac, MacResult};
+use crypto::hmac::Hmac;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
@@ -103,9 +105,14 @@ impl NowSrd {
     }
 
     pub fn write_msg(&mut self, msg: &NowAuthSrdMessage, buffer: &mut Vec<u8>) -> Result<()> {
-        if msg.get_id() == self.seq_num {
+        let seq_num = if self.is_server {
+            (msg.get_id() - 1) / 2
+        } else {
+            msg.get_id() / 2
+        };
+
+        if seq_num == self.seq_num {
             msg.write_to(buffer)?;
-            self.seq_num += 1;
             Ok(())
         } else {
             Err(NowAuthSrdError::BadSequence)
@@ -118,8 +125,14 @@ impl NowSrd {
     {
         let mut reader = std::io::Cursor::new(buffer.clone());
         let packet = T::read_from(&mut reader)?;
-        if packet.get_id() == self.seq_num {
-            self.seq_num += 1;
+
+        let seq_num = if self.is_server {
+            (packet.get_id() - 1) / 2
+        } else {
+            packet.get_id() / 2
+        };
+
+        if seq_num == self.seq_num {
             Ok(packet)
         } else {
             Err(NowAuthSrdError::BadSequence)
@@ -212,15 +225,20 @@ impl NowSrd {
 
         self.derive_keys();
 
-        //TODO: cbt and mac
+        let mut hash = Sha256::new();
+        let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+        hmac.input(&self.client_nonce);
+        hmac.input(&self.cert_data);
+        let mut cbt: [u8; 32] = [0u8; 32];
+        hmac.raw_result(&mut cbt);
 
-        /*let out_packet = NowAuthSrdResponse::new(
+        let out_packet = NowAuthSrdResponse::new(
             in_packet.key_size,
             public_key.to_bytes_be(),
             nonce,
             cbt,
-            mac,
-        );*/
+            self.integrity_key,
+        )?;
 
         Ok(())
     }
