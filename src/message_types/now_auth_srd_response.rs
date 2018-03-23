@@ -80,7 +80,7 @@ impl NowAuthSrdResponse {
         mut public_key: Vec<u8>,
         nonce: [u8; 32],
         cbt: [u8; 32],
-        integrity_key: [u8; 32],
+        integrity_key: &[u8],
     ) -> Result<Self> {
         expand_start(&mut public_key, key_size as usize);
 

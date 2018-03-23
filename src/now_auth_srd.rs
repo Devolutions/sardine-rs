@@ -242,7 +242,7 @@ impl NowSrd {
             public_key.to_bytes_be(),
             self.client_nonce,
             cbt,
-            self.integrity_key,
+            &self.integrity_key,
         )?;
 
         self.write_msg(&out_packet, &mut output_data)?;
@@ -262,7 +262,7 @@ impl NowSrd {
 
         in_packet.verify_mac(&self.integrity_key)?;
 
-        // Verify cbt
+        // Verify client cbt
         let mut hash = Sha256::new();
         let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
         hmac.input(&self.client_nonce);
@@ -279,6 +279,22 @@ impl NowSrd {
             return Err(NowAuthSrdError::InvalidCbt);
         }
 
+        // Generate server cbt
+        hash = Sha256::new();
+        hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+
+        hmac.input(&self.server_nonce);
+
+        match self.cert_data {
+            None => return Err(NowAuthSrdError::InvalidCert),
+            Some(ref c) => hmac.input(c),
+        }
+
+        cbt = [0u8; 32];
+        hmac.raw_result(&mut cbt);
+
+        let out_packet = NowAuthSrdConfirm::new(cbt, &self.integrity_key)?;
+        self.write_msg(&out_packet, &mut output_data)?;
         Ok(())
     }
 
