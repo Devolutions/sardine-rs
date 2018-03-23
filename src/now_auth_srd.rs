@@ -36,10 +36,10 @@ pub struct NowSrd {
     integrity_key: [u8; 32],
     iv: [u8; 32],
 
-    generator: [u8; 2],
+    generator: BigUint,
 
-    prime: Vec<u8>,
-    private_key: Vec<u8>,
+    prime: BigUint,
+    private_key: BigUint,
     secret_key: Vec<u8>,
 
     rng: OsRng,
@@ -65,10 +65,10 @@ impl NowSrd {
             integrity_key: [0; 32],
             iv: [0; 32],
 
-            generator: [0; 2],
+            generator: BigUint::from_bytes_be(&[0]),
 
-            prime: Vec::new(),
-            private_key: Vec::new(),
+            prime: BigUint::from_bytes_be(&[0]),
+            private_key: BigUint::from_bytes_be(&[0]),
             secret_key: Vec::new(),
 
             rng: OsRng::new()?,
@@ -183,44 +183,35 @@ impl NowSrd {
         self.set_key_size(in_packet.key_size)?;
         self.find_dh_parameters()?;
 
-        let g = BigUint::from_bytes_be(&self.generator);
-        let p = BigUint::from_bytes_be(&self.prime);
-        let private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
-        let public_key = g.modpow(&private_key, &p);
+        self.private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
+        let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        self.private_key = private_key.to_bytes_be();
-
-        let mut nonce = [0u8; 32];
-        self.rng.fill_bytes(&mut nonce);
-
-        self.server_nonce = nonce;
+        self.rng.fill_bytes(&mut self.server_nonce);
 
         let out_packet = NowAuthSrdChallenge::new(
             in_packet.key_size,
-            self.generator,
-            self.prime.clone(),
+            &self.generator.to_bytes_be(),
+            self.prime.to_bytes_be(),
             public_key.to_bytes_be(),
-            nonce,
+            self.server_nonce,
         );
-        self.write_msg(&out_packet, &mut output_data);
+        self.write_msg(&out_packet, &mut output_data)?;
         Ok(())
     }
 
     fn client_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         let in_packet = self.read_msg::<NowAuthSrdChallenge>(input_data)?;
 
-        let g = BigUint::from_bytes_be(&in_packet.generator);
-        let p = BigUint::from_bytes_be(&in_packet.prime);
-        let private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
-        let public_key = g.modpow(&private_key, &p);
+        self.generator = BigUint::from_bytes_be(&in_packet.generator);
+        self.prime = BigUint::from_bytes_be(&in_packet.prime);
+        self.private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
+        let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        let mut nonce = [0u8; 32];
-        self.rng.fill_bytes(&mut nonce);
+        self.rng.fill_bytes(&mut self.client_nonce);
 
-        self.client_nonce = nonce;
         self.server_nonce = in_packet.nonce;
         self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
-            .modpow(&private_key, &p)
+            .modpow(&self.private_key, &self.prime)
             .to_bytes_be();
 
         self.derive_keys();
@@ -235,11 +226,12 @@ impl NowSrd {
         let out_packet = NowAuthSrdResponse::new(
             in_packet.key_size,
             public_key.to_bytes_be(),
-            nonce,
+            self.client_nonce,
             cbt,
             self.integrity_key,
         )?;
 
+        self.write_msg(&out_packet, &mut output_data)?;
         Ok(())
     }
 
@@ -270,18 +262,18 @@ impl NowSrd {
     fn find_dh_parameters(&mut self) -> Result<()> {
         match self.key_size {
             256 => {
-                self.generator = SRD_DH_PARAMS[0].g_data.clone();
-                self.prime = SRD_DH_PARAMS[0].p_data.to_vec();
+                self.generator = BigUint::from_bytes_be(SRD_DH_PARAMS[0].g_data);
+                self.prime = BigUint::from_bytes_be(SRD_DH_PARAMS[0].p_data);
                 Ok(())
             }
             512 => {
-                self.generator = SRD_DH_PARAMS[1].g_data.clone();
-                self.prime = SRD_DH_PARAMS[1].p_data.to_vec();
+                self.generator = BigUint::from_bytes_be(SRD_DH_PARAMS[1].g_data);
+                self.prime = BigUint::from_bytes_be(SRD_DH_PARAMS[1].p_data);
                 Ok(())
             }
             1024 => {
-                self.generator = SRD_DH_PARAMS[2].g_data.clone();
-                self.prime = SRD_DH_PARAMS[2].p_data.to_vec();
+                self.generator = BigUint::from_bytes_be(SRD_DH_PARAMS[2].g_data);
+                self.prime = BigUint::from_bytes_be(SRD_DH_PARAMS[2].p_data);
                 Ok(())
             }
             _ => Err(NowAuthSrdError::InvalidKeySize),

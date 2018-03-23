@@ -69,19 +69,21 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge {
 impl NowAuthSrdChallenge {
     pub fn new(
         key_size: u16,
-        g_data: [u8; 2],
-        p_data: Vec<u8>,
+        g_data: &[u8],
+        prime: Vec<u8>,
         public_key: Vec<u8>,
         nonce: [u8; 32],
     ) -> NowAuthSrdChallenge {
+        let mut generator = [0u8;2];
+        generator.copy_from_slice(g_data);
         NowAuthSrdChallenge {
             packet_type: NOW_AUTH_SRD_CHALLENGE_ID,
             flags: 0,
             key_size,
-            generator: g_data,
-            prime: p_data.to_vec(),
-            public_key: p_data.to_vec(), //TODO
-            nonce: [0u8; 32],            //TODO
+            generator,
+            prime,
+            public_key,
+            nonce,
         }
     }
 }
