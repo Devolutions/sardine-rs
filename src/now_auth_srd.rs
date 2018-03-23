@@ -1,12 +1,10 @@
 use std;
-use std::ffi::CStr;
 
-use rand;
 use rand::{OsRng, Rng};
 
 use num::bigint::{BigUint, RandBigInt};
 
-use crypto::mac::{Mac, MacResult};
+use crypto::mac::Mac;
 use crypto::hmac::Hmac;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
@@ -30,7 +28,6 @@ pub struct NowSrd {
     cert_data: Option<Vec<u8>>,
     cbt_level: u32,
 
-    //buffers: [&'a [u8]; 6],
     client_nonce: [u8; 32],
     server_nonce: [u8; 32],
     delegation_key: [u8; 32],
@@ -86,8 +83,7 @@ impl NowSrd {
         self.password.clone()
     }
 
-    pub fn set_credentials_callback(&mut self, callback: fn(&String, &String) -> bool)
-    {
+    pub fn set_credentials_callback(&mut self, callback: fn(&String, &String) -> bool) {
         self.credentials_callback = Some(callback)
     }
 
@@ -180,25 +176,28 @@ impl NowSrd {
         Ok(false)
     }
 
+    // Client negotiate
     fn client_0(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         let msg = NowAuthSrdNegotiate::new(self.key_size);
         self.write_msg(&msg, &mut output_data)?;
         Ok(())
     }
 
+    // Server negotiate -> challenge
     fn server_0(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         let in_packet = self.read_msg::<NowAuthSrdNegotiate>(input_data)?;
         self.set_key_size(in_packet.key_size)?;
         self.find_dh_parameters()?;
 
         self.private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
+
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
         self.rng.fill_bytes(&mut self.server_nonce);
 
         let out_packet = NowAuthSrdChallenge::new(
             in_packet.key_size,
-            &self.generator.to_bytes_be(),
+            self.generator.to_bytes_be(),
             self.prime.to_bytes_be(),
             public_key.to_bytes_be(),
             self.server_nonce,
@@ -207,6 +206,7 @@ impl NowSrd {
         Ok(())
     }
 
+    // Client challenge -> reponse
     fn client_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         let in_packet = self.read_msg::<NowAuthSrdChallenge>(input_data)?;
 
@@ -248,7 +248,19 @@ impl NowSrd {
         Ok(())
     }
 
+    // Server response -> confirm
     fn server_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+        let in_packet = self.read_msg::<NowAuthSrdResponse>(input_data)?;
+        self.client_nonce = in_packet.nonce;
+
+        self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
+            .modpow(&self.private_key, &self.prime)
+            .to_bytes_be();
+
+        self.derive_keys();
+
+        in_packet.verify_mac(&self.integrity_key)?;
+
         Ok(())
     }
 
@@ -302,9 +314,9 @@ impl NowSrd {
         hash.result(&mut self.delegation_key);
 
         hash = Sha256::new();
-        hash.input(&self.client_nonce);
-        hash.input(&self.secret_key);
         hash.input(&self.server_nonce);
+        hash.input(&self.secret_key);
+        hash.input(&self.client_nonce);
 
         hash.result(&mut self.integrity_key);
 

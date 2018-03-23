@@ -80,9 +80,12 @@ fn good_login() {
     let mut server_status: bool = false;
 
     while !client_status && !server_status {
+        println!("Client");
         client_status = client.authenticate(&mut in_data, &mut out_data).unwrap();
         in_data = out_data;
         out_data = Vec::new();
+
+        println!("Server");
 
         server_status = server.authenticate(&mut in_data, &mut out_data).unwrap();
         in_data = out_data;

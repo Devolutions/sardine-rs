@@ -25,3 +25,11 @@ pub use message_types::now_auth_srd_confirm::NowAuthSrdConfirm;
 pub use message_types::now_auth_srd_delegate::NowAuthSrdDelegate;
 pub use message_types::now_auth_srd_result::NowAuthSrdResult;
 pub use message_types::now_srd_auth_logon_blob::NowAuthSrdLogonBlob;
+
+fn expand_start<T: Default>(buffer: &mut Vec<T>, new_size: usize) {
+    if new_size > buffer.len() {
+        for _ in 0..(new_size - buffer.len()) {
+            buffer.insert(0, Default::default());
+        }
+    }
+}

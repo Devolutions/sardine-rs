@@ -41,7 +41,7 @@ fn challenge_encoding() {
         packet_type: 2,
         flags: 0,
         key_size: 256,
-        generator: [0, 0],
+        generator: vec![0, 0],
         prime: vec![0u8; 256],
         public_key: vec![0u8; 256],
         nonce: [0u8; 32],

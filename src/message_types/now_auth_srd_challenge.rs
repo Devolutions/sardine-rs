@@ -4,6 +4,7 @@ use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use message_types::NowAuthSrdMessage;
+use message_types::expand_start;
 use message_types::now_auth_srd_id::NOW_AUTH_SRD_CHALLENGE_ID;
 use Result;
 
@@ -11,7 +12,7 @@ pub struct NowAuthSrdChallenge {
     pub packet_type: u16,
     pub flags: u16,
     pub key_size: u16,
-    pub generator: [u8; 2],
+    pub generator: Vec<u8>,
     pub prime: Vec<u8>,
     pub public_key: Vec<u8>,
     pub nonce: [u8; 32],
@@ -25,10 +26,11 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge {
         let packet_type = buffer.read_u16::<LittleEndian>()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
         let key_size = buffer.read_u16::<LittleEndian>()?;
-        let generator = [buffer.read_u8()?, buffer.read_u8()?];
 
+        let mut generator = vec![0u8; 2];
         let mut prime = vec![0u8; key_size as usize];
         let mut public_key = vec![0u8; key_size as usize];
+        buffer.read_exact(&mut generator)?;
         buffer.read_exact(&mut prime)?;
         buffer.read_exact(&mut public_key)?;
 
@@ -54,6 +56,7 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge {
         buffer.write_all(&self.prime)?;
         buffer.write_all(&self.public_key)?;
         buffer.write_all(&self.nonce)?;
+
         Ok(())
     }
 
@@ -69,13 +72,15 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge {
 impl NowAuthSrdChallenge {
     pub fn new(
         key_size: u16,
-        g_data: &[u8],
-        prime: Vec<u8>,
-        public_key: Vec<u8>,
+        mut generator: Vec<u8>,
+        mut prime: Vec<u8>,
+        mut public_key: Vec<u8>,
         nonce: [u8; 32],
     ) -> NowAuthSrdChallenge {
-        let mut generator = [0u8; 2];
-        generator.copy_from_slice(g_data);
+        expand_start(&mut generator, 2);
+        expand_start(&mut prime, (key_size / 8) as usize);
+        expand_start(&mut public_key, (key_size / 8) as usize);
+
         NowAuthSrdChallenge {
             packet_type: NOW_AUTH_SRD_CHALLENGE_ID,
             flags: 0,

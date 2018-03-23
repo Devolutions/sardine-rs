@@ -9,8 +9,10 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
 use message_types::NowAuthSrdMessage;
+use message_types::expand_start;
 use message_types::now_auth_srd_id::NOW_AUTH_SRD_RESPONSE_ID;
 use now_auth_srd_errors::NowAuthSrdError;
+
 use Result;
 
 pub struct NowAuthSrdResponse {
@@ -75,11 +77,13 @@ impl NowAuthSrdMessage for NowAuthSrdResponse {
 impl NowAuthSrdResponse {
     pub fn new(
         key_size: u16,
-        public_key: Vec<u8>,
+        mut public_key: Vec<u8>,
         nonce: [u8; 32],
         cbt: [u8; 32],
         integrity_key: [u8; 32],
     ) -> Result<Self> {
+        expand_start(&mut public_key, key_size as usize);
+
         let mut response = NowAuthSrdResponse {
             packet_type: NOW_AUTH_SRD_RESPONSE_ID,
             flags: 0x03,
@@ -90,6 +94,7 @@ impl NowAuthSrdResponse {
             cbt,
             mac: [0u8; 32],
         };
+
         response.compute_mac(&integrity_key)?;
         Ok(response)
     }
@@ -130,6 +135,7 @@ impl NowAuthSrdResponse {
         buffer.write_all(&self.public_key)?;
         buffer.write_all(&self.nonce)?;
         buffer.write_all(&self.cbt)?;
+
         Ok(())
     }
 }
