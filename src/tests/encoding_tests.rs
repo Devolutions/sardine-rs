@@ -165,8 +165,7 @@ fn delegate_encoding() {
         packet_type: 1,
         flags: 0,
         size: 256,
-        username: [0u8; 128],
-        password: [0u8; 128],
+        data: [0u8; 256],
     };
 
     let msg = NowAuthSrdDelegate {
@@ -203,8 +202,7 @@ fn delegate_encoding() {
             assert_eq!(x.reserved, 0);
             assert_eq!(x.blob.packet_type, 1);
             assert_eq!(x.blob.size, 256);
-            assert_eq!(x.blob.username.to_vec(), vec![0u8; 128]);
-            assert_eq!(x.blob.password.to_vec(), vec![0u8; 128]);
+            assert_eq!(x.blob.data.to_vec(), vec![0u8; 256]);
             assert_eq!(x.mac, [0u8; 32]);
         }
         Err(_) => assert!(false),

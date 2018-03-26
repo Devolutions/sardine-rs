@@ -3,6 +3,10 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
+use crypto::aes;
+use crypto::buffer;
+use crypto::blockmodes::NoPadding;
+
 use message_types::NowAuthSrdMessage;
 use message_types::now_auth_srd_id::NOW_AUTH_SRD_LOGON_BLOB_ID;
 use Result;
@@ -11,8 +15,7 @@ pub struct NowAuthSrdLogonBlob {
     pub packet_type: u8,
     pub flags: u8,
     pub size: u16,
-    pub username: [u8; 128],
-    pub password: [u8; 128],
+    pub data: [u8; 256],
 }
 
 impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
@@ -24,18 +27,15 @@ impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
         let flags = buffer.read_u8()?;
         let size = buffer.read_u16::<LittleEndian>()?;
 
-        let mut username = [0u8; 128];
-        let mut password = [0u8; 128];
+        let mut data = [0u8; 256];
 
-        buffer.read_exact(&mut username)?;
-        buffer.read_exact(&mut password)?;
+        buffer.read_exact(&mut data)?;
 
         Ok(NowAuthSrdLogonBlob {
             packet_type,
             flags,
             size,
-            username,
-            password,
+            data,
         })
     }
 
@@ -43,8 +43,7 @@ impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
         buffer.write_u8(self.packet_type)?;
         buffer.write_u8(self.flags)?;
         buffer.write_u16::<LittleEndian>(self.size)?;
-        buffer.write_all(&self.username)?;
-        buffer.write_all(&self.password)?;
+        buffer.write_all(&self.data)?;
         Ok(())
     }
 
@@ -54,5 +53,42 @@ impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
 
     fn get_id(&self) -> u16 {
         NOW_AUTH_SRD_LOGON_BLOB_ID
+    }
+}
+
+impl NowAuthSrdLogonBlob {
+    pub fn new(
+        username: &[u8],
+        password: &[u8],
+        iv: &[u8],
+        key: &[u8],
+    ) -> Result<NowAuthSrdLogonBlob> {
+        let mut obj = NowAuthSrdLogonBlob {
+            packet_type: NOW_AUTH_SRD_LOGON_BLOB_ID as u8,
+            flags: 0,
+            size: 256,
+            data: [0u8; 256],
+        };
+        obj.encrypt_data(username, password, iv, key)?;
+        Ok(obj)
+    }
+
+    fn encrypt_data(
+        &mut self,
+        username: &[u8],
+        password: &[u8],
+        iv: &[u8],
+        key: &[u8],
+    ) -> Result<()> {
+        let mut data = Vec::new();
+        data.write_all(username)?;
+        data.write_all(password)?;
+
+        let mut cipher = aes::cbc_encryptor(aes::KeySize::KeySize256, key, iv, NoPadding);
+        let mut read_buffer = buffer::RefReadBuffer::new(&data);
+        let mut write_buffer = buffer::RefWriteBuffer::new(&mut self.data);
+
+        cipher.encrypt(&mut read_buffer, &mut write_buffer, false)?;
+        Ok(())
     }
 }

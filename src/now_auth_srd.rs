@@ -1,4 +1,5 @@
 use std;
+use std::io::Read;
 
 use rand::{OsRng, Rng};
 
@@ -12,7 +13,7 @@ use crypto::sha2::Sha256;
 use Result;
 use now_auth_srd_errors::NowAuthSrdError;
 use message_types::*;
-use dh_params::{SRD_DH_PARAMS};
+use dh_params::SRD_DH_PARAMS;
 
 pub struct NowSrd {
     credentials_callback: Option<fn(&String, &String) -> bool>,
@@ -158,7 +159,7 @@ impl NowSrd {
                 1 => self.client_1(input_data, output_data)?,
                 2 => self.client_2(input_data, output_data)?,
                 3 => {
-                    self.client_3(input_data, output_data)?;
+                    self.client_3(input_data)?;
                     return Ok(true);
                 }
                 _ => return Err(NowAuthSrdError::BadSequence),
@@ -170,6 +171,7 @@ impl NowSrd {
 
     // Client negotiate
     fn client_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
+        // Negotiate
         let msg = NowAuthSrdNegotiate::new(self.key_size);
         self.write_msg(&msg, &mut output_data)?;
         Ok(())
@@ -177,10 +179,12 @@ impl NowSrd {
 
     // Server negotiate -> challenge
     fn server_0(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+        // Negotiate
         let in_packet = self.read_msg::<NowAuthSrdNegotiate>(input_data)?;
         self.set_key_size(in_packet.key_size)?;
         self.find_dh_parameters()?;
 
+        // Challenge
         self.private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
@@ -200,6 +204,7 @@ impl NowSrd {
 
     // Client challenge -> reponse
     fn client_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+        //Challenge
         let in_packet = self.read_msg::<NowAuthSrdChallenge>(input_data)?;
 
         self.generator = BigUint::from_bytes_be(&in_packet.generator);
@@ -216,6 +221,7 @@ impl NowSrd {
 
         self.derive_keys();
 
+        // Response
         // Generate cbt
         let hash = Sha256::new();
         let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
@@ -243,6 +249,7 @@ impl NowSrd {
 
     // Server response -> confirm
     fn server_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+        // Response
         let in_packet = self.read_msg::<NowAuthSrdResponse>(input_data)?;
         self.client_nonce = in_packet.nonce;
 
@@ -271,6 +278,7 @@ impl NowSrd {
             return Err(NowAuthSrdError::InvalidCbt);
         }
 
+        // Confirm
         // Generate server cbt
         hash = Sha256::new();
         hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
@@ -290,7 +298,40 @@ impl NowSrd {
         Ok(())
     }
 
+    // Client confirm -> delegate
     fn client_2(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+        // Confirm
+        let in_packet = self.read_msg::<NowAuthSrdConfirm>(input_data)?;
+
+        in_packet.verify_mac(&self.integrity_key)?;
+
+        // Verify Server cbt
+        let hash = Sha256::new();
+        let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+        hmac.input(&self.server_nonce);
+
+        match self.cert_data {
+            None => return Err(NowAuthSrdError::InvalidCert),
+            Some(ref c) => hmac.input(c),
+        }
+
+        let mut cbt: [u8; 32] = [0u8; 32];
+        hmac.raw_result(&mut cbt);
+
+        if cbt != in_packet.cbt {
+            return Err(NowAuthSrdError::InvalidCbt);
+        }
+
+        // Delegate
+        let logon_blob = NowAuthSrdLogonBlob::new(
+            &convert_and_pad_to_cstr(&mut self.rng, &self.username)?,
+            &convert_and_pad_to_cstr(&mut self.rng, &self.password)?,
+            &self.iv[0..16],
+            &self.delegation_key,
+        )?;
+
+        let message = NowAuthSrdDelegate::new(logon_blob, &self.integrity_key)?;
+        self.write_msg(&message, &mut output_data)?;
         Ok(())
     }
 
@@ -298,7 +339,7 @@ impl NowSrd {
         Ok(())
     }
 
-    fn client_3(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+    fn client_3(&mut self, input_data: &mut Vec<u8>) -> Result<()> {
         Ok(())
     }
 
@@ -344,4 +385,22 @@ impl NowSrd {
 
         hash.result(&mut self.iv);
     }
+}
+
+fn convert_and_pad_to_cstr(rng: &mut OsRng, str: &str) -> Result<[u8; 128]> {
+    //TODO: Block large username and password
+    let mut cstr = [0u8; 128];
+    std::ffi::CString::new(str)?
+        .as_bytes_with_nul()
+        .read(&mut cstr)?;
+    let index = match cstr.iter().enumerate().find(|&x| *x.1 == b'\x00') {
+        None => {
+            return Err(NowAuthSrdError::InvalidCstr);
+        }
+        Some(t) => t.0,
+    };
+    for i in index..cstr.len() {
+        cstr[i] = rng.gen::<u8>();
+    }
+    Ok(cstr)
 }
