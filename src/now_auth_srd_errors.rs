@@ -2,6 +2,7 @@ use std;
 use std::fmt;
 use std::io::Error;
 use std::ffi::NulError;
+use std::string::FromUtf8Error;
 use crypto::symmetriccipher::SymmetricCipherError;
 
 #[derive(Debug)]
@@ -15,6 +16,7 @@ pub enum NowAuthSrdError {
     InvalidMac,
     InvalidCbt,
     InvalidCert,
+    InvalidCredentials,
     InvalidCstr,
 }
 
@@ -30,6 +32,7 @@ impl fmt::Display for NowAuthSrdError {
             &NowAuthSrdError::InvalidMac => write!(f, "MAC error"),
             &NowAuthSrdError::InvalidCbt => write!(f, "CBT error"),
             &NowAuthSrdError::InvalidCert => write!(f, "Certificate error"),
+            &NowAuthSrdError::InvalidCredentials => write!(f, "Credentials error"),
             &NowAuthSrdError::InvalidCstr => write!(f, "String encoding error"),
         }
     }
@@ -51,6 +54,7 @@ impl std::error::Error for NowAuthSrdError {
             NowAuthSrdError::InvalidMac => "Message authentication code is invalid",
             NowAuthSrdError::InvalidCbt => "Channel binding token is invalid",
             NowAuthSrdError::InvalidCert => "Certificate is invalid or absent",
+            NowAuthSrdError::InvalidCredentials => "Received credentials are invalid!",
             NowAuthSrdError::InvalidCstr => "Username or password is not null-terminated",
         }
     }
@@ -71,5 +75,11 @@ impl From<SymmetricCipherError> for NowAuthSrdError {
 impl From<NulError> for NowAuthSrdError {
     fn from(error: NulError) -> NowAuthSrdError {
         NowAuthSrdError::Ffi(error)
+    }
+}
+
+impl From<FromUtf8Error> for NowAuthSrdError {
+    fn from(error: FromUtf8Error) -> NowAuthSrdError {
+        NowAuthSrdError::InvalidCstr
     }
 }

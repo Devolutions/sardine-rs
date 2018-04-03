@@ -109,4 +109,8 @@ impl NowAuthSrdDelegate {
             Err(NowAuthSrdError::InvalidMac)
         }
     }
+
+    pub fn get_data(&self, iv: &[u8], key: &[u8]) -> Result<[u8; 256]> {
+        Ok(self.blob.decrypt_data(iv, key)?)
+    }
 }

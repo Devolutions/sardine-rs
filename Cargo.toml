@@ -5,7 +5,6 @@ authors = ["pdugre"]
 
 [dependencies]
 rand = "0.4"
-rust-crypto = "^0.2"
+rust-crypto = "0.2.36"
 num="0.1"
 byteorder = "1.2.1"
-bufstream = "0.1.3"

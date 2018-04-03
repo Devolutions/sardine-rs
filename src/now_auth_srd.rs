@@ -149,8 +149,10 @@ impl NowSrd {
                 1 => self.server_1(input_data, output_data)?,
                 2 => {
                     self.server_2(input_data, output_data)?;
+                    self.seq_num += 1;
                     return Ok(true);
                 }
+                3 => return Ok(true),
                 _ => return Err(NowAuthSrdError::BadSequence),
             }
         } else {
@@ -335,12 +337,44 @@ impl NowSrd {
         Ok(())
     }
 
+    // Server delegate -> result
     fn server_2(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
-        Ok(())
+        // Receive delegate and verify credentials...
+        let in_packet = self.read_msg::<NowAuthSrdDelegate>(input_data)?;
+        in_packet.verify_mac(&self.integrity_key)?;
+
+        let credentials_data = in_packet.get_data(&self.iv[0..16], &self.delegation_key)?;
+
+        self.username = convert_and_unpad_from_cstr(&credentials_data[0..128])?;
+        self.password = convert_and_unpad_from_cstr(&credentials_data[128..256])?;
+
+        match self.credentials_callback {
+            Some(c) => {
+                if c(&self.username, &self.password) {
+                    let message = NowAuthSrdResult::new(0, &self.integrity_key)?;
+                    self.write_msg(&message, &mut output_data)?;
+                    Ok(())
+                } else {
+                    let message = NowAuthSrdResult::new(1, &self.integrity_key)?;
+                    self.write_msg(&message, &mut output_data)?;
+                    Err(NowAuthSrdError::InvalidCredentials)
+                }
+            }
+            None => Err(NowAuthSrdError::MissingCallback),
+        }
     }
 
+    // Client result
     fn client_3(&mut self, input_data: &mut Vec<u8>) -> Result<()> {
-        Ok(())
+        println!("hello there");
+        let in_packet = self.read_msg::<NowAuthSrdResult>(input_data)?;
+        in_packet.verify_mac(&self.integrity_key)?;
+
+        if in_packet.status != 0 {
+            Err(NowAuthSrdError::InvalidCredentials)
+        } else {
+            Ok(())
+        }
     }
 
     fn find_dh_parameters(&mut self) -> Result<()> {
@@ -399,8 +433,18 @@ fn convert_and_pad_to_cstr(rng: &mut OsRng, str: &str) -> Result<[u8; 128]> {
         }
         Some(t) => t.0,
     };
-    for i in index..cstr.len() {
+    for i in index + 1..cstr.len() {
         cstr[i] = rng.gen::<u8>();
     }
     Ok(cstr)
+}
+
+fn convert_and_unpad_from_cstr(data: &[u8]) -> Result<String> {
+    let index = match data.iter().enumerate().find(|&x| *x.1 == b'\x00') {
+        None => {
+            return Err(NowAuthSrdError::InvalidCstr);
+        }
+        Some(t) => t.0,
+    };
+    Ok(String::from_utf8(data[0..index].to_vec())?)
 }

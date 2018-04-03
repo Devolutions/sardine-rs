@@ -77,7 +77,7 @@ fn good_login() {
     let mut client_status: bool = false;
     let mut server_status: bool = false;
 
-    while !client_status && !server_status {
+    while !(client_status && server_status) {
         println!("Client");
         client_status = client.authenticate(&mut in_data, &mut out_data).unwrap();
         in_data = out_data;
@@ -87,7 +87,7 @@ fn good_login() {
 
         server_status = server.authenticate(&mut in_data, &mut out_data).unwrap();
         in_data = out_data;
-        out_data = Vec::new()
+        out_data = Vec::new();
     }
 
     assert!(client_status);
