@@ -5,6 +5,6 @@ authors = ["pdugre"]
 
 [dependencies]
 rand = "0.4"
-rust-crypto = "0.2.36"
-num="0.1"
+rust-crypto = "0.2.36"  # Broken for wasm
+num="0.1"               # Broken for wasm
 byteorder = "1.2.1"
