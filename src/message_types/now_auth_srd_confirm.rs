@@ -60,10 +60,20 @@ impl NowAuthSrdMessage for NowAuthSrdConfirm {
 }
 
 impl NowAuthSrdConfirm {
-    pub fn new(cbt: [u8; 32], integrity_key: &[u8]) -> Result<Self> {
+    pub fn new(cbt_opt: Option<[u8; 32]>, integrity_key: &[u8]) -> Result<Self> {
+        let mut flags = 0x01u16;
+        let mut cbt = [0u8; 32];
+
+        match cbt_opt {
+            None => (),
+            Some(c) => {
+                flags = 0x03;
+                cbt = c;
+            }
+        }
         let mut response = NowAuthSrdConfirm {
             packet_type: NOW_AUTH_SRD_CONFIRM_ID,
-            flags: 0x03,
+            flags,
             reserved: 0,
             cbt,
             mac: [0u8; 32],
@@ -71,6 +81,10 @@ impl NowAuthSrdConfirm {
 
         response.compute_mac(&integrity_key)?;
         Ok(response)
+    }
+
+    pub fn has_cbt(&self) -> bool {
+        self.flags & 0x02 == 0x02
     }
 
     fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {

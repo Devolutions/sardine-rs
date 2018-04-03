@@ -223,19 +223,21 @@ impl NowSrd {
 
         self.derive_keys();
 
-        // Response
         // Generate cbt
-        let hash = Sha256::new();
-        let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
-        hmac.input(&self.client_nonce);
+        let cbt;
 
         match self.cert_data {
-            None => return Err(NowAuthSrdError::InvalidCert),
-            Some(ref c) => hmac.input(c),
+            None => cbt = None,
+            Some(ref cert) => {
+                let hash = Sha256::new();
+                let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+                hmac.input(&self.client_nonce);
+                hmac.input(&cert);
+                let mut cbt_data: [u8; 32] = [0u8; 32];
+                hmac.raw_result(&mut cbt_data);
+                cbt = Some(cbt_data);
+            }
         }
-
-        let mut cbt: [u8; 32] = [0u8; 32];
-        hmac.raw_result(&mut cbt);
 
         let out_packet = NowAuthSrdResponse::new(
             in_packet.key_size,
@@ -264,36 +266,43 @@ impl NowSrd {
         in_packet.verify_mac(&self.integrity_key)?;
 
         // Verify client cbt
-        let mut hash = Sha256::new();
-        let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
-        hmac.input(&self.client_nonce);
-
         match self.cert_data {
-            None => return Err(NowAuthSrdError::InvalidCert),
-            Some(ref c) => hmac.input(c),
-        }
-
-        let mut cbt: [u8; 32] = [0u8; 32];
-        hmac.raw_result(&mut cbt);
-
-        if cbt != in_packet.cbt {
-            return Err(NowAuthSrdError::InvalidCbt);
+            None => {
+                if in_packet.has_cbt() {
+                    return Err(NowAuthSrdError::InvalidCert);
+                }
+            }
+            Some(ref c) => {
+                if !in_packet.has_cbt() {
+                    return Err(NowAuthSrdError::InvalidCert);
+                }
+                let mut hash = Sha256::new();
+                let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+                hmac.input(&self.client_nonce);
+                hmac.input(&c);
+                let mut cbt_data: [u8; 32] = [0u8; 32];
+                hmac.raw_result(&mut cbt_data);
+                if cbt_data != in_packet.cbt {
+                    return Err(NowAuthSrdError::InvalidCbt);
+                }
+            }
         }
 
         // Confirm
         // Generate server cbt
-        hash = Sha256::new();
-        hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
-
-        hmac.input(&self.server_nonce);
-
+        let cbt;
         match self.cert_data {
-            None => return Err(NowAuthSrdError::InvalidCert),
-            Some(ref c) => hmac.input(c),
+            None => cbt = None,
+            Some(ref cert) => {
+                let hash = Sha256::new();
+                let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+                hmac.input(&self.server_nonce);
+                hmac.input(&cert);
+                let mut cbt_data: [u8; 32] = [0u8; 32];
+                hmac.raw_result(&mut cbt_data);
+                cbt = Some(cbt_data);
+            }
         }
-
-        cbt = [0u8; 32];
-        hmac.raw_result(&mut cbt);
 
         let out_packet = NowAuthSrdConfirm::new(cbt, &self.integrity_key)?;
         self.write_msg(&out_packet, &mut output_data)?;
@@ -308,20 +317,26 @@ impl NowSrd {
         in_packet.verify_mac(&self.integrity_key)?;
 
         // Verify Server cbt
-        let hash = Sha256::new();
-        let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
-        hmac.input(&self.server_nonce);
-
         match self.cert_data {
-            None => return Err(NowAuthSrdError::InvalidCert),
-            Some(ref c) => hmac.input(c),
-        }
-
-        let mut cbt: [u8; 32] = [0u8; 32];
-        hmac.raw_result(&mut cbt);
-
-        if cbt != in_packet.cbt {
-            return Err(NowAuthSrdError::InvalidCbt);
+            None => {
+                if in_packet.has_cbt() {
+                    return Err(NowAuthSrdError::InvalidCert);
+                }
+            }
+            Some(ref c) => {
+                if !in_packet.has_cbt() {
+                    return Err(NowAuthSrdError::InvalidCert);
+                }
+                let mut hash = Sha256::new();
+                let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+                hmac.input(&self.server_nonce);
+                hmac.input(&c);
+                let mut cbt_data: [u8; 32] = [0u8; 32];
+                hmac.raw_result(&mut cbt_data);
+                if cbt_data != in_packet.cbt {
+                    return Err(NowAuthSrdError::InvalidCbt);
+                }
+            }
         }
 
         // Delegate
@@ -366,7 +381,6 @@ impl NowSrd {
 
     // Client result
     fn client_3(&mut self, input_data: &mut Vec<u8>) -> Result<()> {
-        println!("hello there");
         let in_packet = self.read_msg::<NowAuthSrdResult>(input_data)?;
         in_packet.verify_mac(&self.integrity_key)?;
 

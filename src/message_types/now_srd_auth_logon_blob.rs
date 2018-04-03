@@ -93,7 +93,6 @@ impl NowAuthSrdLogonBlob {
     }
 
     pub fn decrypt_data(&self, iv: &[u8], key: &[u8]) -> Result<[u8; 256]> {
-        println!("enc data: {:?}", self.data.to_vec());
         let mut data = [0u8; 256];
         {
             let mut cipher = aes::cbc_decryptor(aes::KeySize::KeySize256, key, iv, NoPadding);

@@ -65,6 +65,7 @@ fn good_login() {
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();
 
+    // Commenting out those two lines should work without cbt verification
     client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
     server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
 

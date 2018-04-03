@@ -79,7 +79,7 @@ impl From<NulError> for NowAuthSrdError {
 }
 
 impl From<FromUtf8Error> for NowAuthSrdError {
-    fn from(error: FromUtf8Error) -> NowAuthSrdError {
+    fn from(_error: FromUtf8Error) -> NowAuthSrdError {
         NowAuthSrdError::InvalidCstr
     }
 }

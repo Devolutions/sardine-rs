@@ -78,14 +78,25 @@ impl NowAuthSrdResponse {
         key_size: u16,
         mut public_key: Vec<u8>,
         nonce: [u8; 32],
-        cbt: [u8; 32],
+        cbt_opt: Option<[u8; 32]>,
         integrity_key: &[u8],
     ) -> Result<Self> {
         expand_start(&mut public_key, key_size as usize);
 
+        let mut flags = 0x01u16;
+        let mut cbt = [0u8; 32];
+
+        match cbt_opt {
+            None => (),
+            Some(c) => {
+                flags = 0x03;
+                cbt = c;
+            }
+        }
+
         let mut response = NowAuthSrdResponse {
             packet_type: NOW_AUTH_SRD_RESPONSE_ID,
-            flags: 0x03,
+            flags,
             reserved: 0,
             key_size,
             public_key,
@@ -96,6 +107,10 @@ impl NowAuthSrdResponse {
 
         response.compute_mac(&integrity_key)?;
         Ok(response)
+    }
+
+    pub fn has_cbt(&self) -> bool {
+        self.flags & 0x02 == 0x02
     }
 
     fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {
