@@ -226,7 +226,7 @@ impl NowSrd {
             .modpow(&self.private_key, &self.prime)
             .to_bytes_be();
 
-        self.derive_keys()?;
+        self.derive_keys();
 
         // Generate cbt
         let cbt;
@@ -267,7 +267,7 @@ impl NowSrd {
             .modpow(&self.private_key, &self.prime)
             .to_bytes_be();
 
-        self.derive_keys()?;
+        self.derive_keys();
 
         in_packet.verify_mac(&self.integrity_key)?;
 
@@ -421,27 +421,27 @@ impl NowSrd {
         }
     }
 
-    fn derive_keys(&mut self) -> Result<()> {
+    fn derive_keys(&mut self) {
         let mut hash = Sha256::new();
         hash.input(&self.client_nonce);
         hash.input(&self.secret_key);
         hash.input(&self.server_nonce);
 
-        hash.result().to_vec().write_all(&mut self.delegation_key)?;
+        self.delegation_key
+            .clone_from_slice(&hash.result().to_vec());
 
         hash = Sha256::new();
         hash.input(&self.server_nonce);
         hash.input(&self.secret_key);
         hash.input(&self.client_nonce);
 
-        hash.result().to_vec().write_all(&mut self.integrity_key)?;
+        self.integrity_key.clone_from_slice(&hash.result().to_vec());
 
         hash = Sha256::new();
         hash.input(&self.client_nonce);
         hash.input(&self.server_nonce);
 
-        hash.result().to_vec().write_all(&mut self.iv)?;
-        Ok(())
+        self.iv.clone_from_slice(&hash.result().to_vec());
     }
 }
 

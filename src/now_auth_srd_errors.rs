@@ -5,16 +5,16 @@ use std::ffi::NulError;
 use std::string::FromUtf8Error;
 use hmac::crypto_mac::InvalidKeyLength;
 
-#[cfg(all(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 use aes_soft;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(target_arch = "wasm32"))]
 use crypto::symmetriccipher::SymmetricCipherError;
 
 #[derive(Debug)]
 pub enum NowAuthSrdError {
     Io(Error),
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(target_arch = "wasm32"))]
     Crypto(SymmetricCipherError),
     Ffi(NulError),
     BadSequence,
@@ -31,7 +31,7 @@ impl fmt::Display for NowAuthSrdError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             &NowAuthSrdError::Io(ref error) => error.fmt(f),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(target_arch = "wasm32"))]
             &NowAuthSrdError::Crypto(ref _error) => write!(f, "Crypto error"),
             &NowAuthSrdError::Ffi(ref _error) => write!(f, "FFI error"),
             &NowAuthSrdError::BadSequence => write!(f, "Sequence error"),
@@ -50,7 +50,7 @@ impl std::error::Error for NowAuthSrdError {
     fn description(&self) -> &str {
         match *self {
             NowAuthSrdError::Io(ref error) => error.description(),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(target_arch = "wasm32"))]
             NowAuthSrdError::Crypto(ref _error) => {
                 "There was a problem while encrypting or decrypting"
             }
@@ -75,7 +75,7 @@ impl From<Error> for NowAuthSrdError {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(target_arch = "wasm32"))]
 impl From<SymmetricCipherError> for NowAuthSrdError {
     fn from(error: SymmetricCipherError) -> NowAuthSrdError {
         NowAuthSrdError::Crypto(error)
@@ -100,7 +100,7 @@ impl From<InvalidKeyLength> for NowAuthSrdError {
     }
 }
 
-#[cfg(all(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<aes_soft::block_cipher_trait::InvalidKeyLength> for NowAuthSrdError {
     fn from(_error: aes_soft::block_cipher_trait::InvalidKeyLength) -> NowAuthSrdError {
         NowAuthSrdError::InvalidKeySize

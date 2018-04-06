@@ -5,10 +5,10 @@ extern crate num_bigint;
 extern crate rand;
 extern crate sha2;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(target_arch = "wasm32"))]
 extern crate crypto;
 
-#[cfg(all(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 extern crate aes_soft;
 
 mod message_types;
