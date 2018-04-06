@@ -3,7 +3,7 @@ use std::io::Read;
 
 use rand::{OsRng, Rng};
 
-use num::bigint::{BigUint, RandBigInt};
+use num_bigint::BigUint;
 
 use crypto::mac::Mac;
 use crypto::hmac::Hmac;
@@ -187,7 +187,9 @@ impl NowSrd {
         self.find_dh_parameters()?;
 
         // Challenge
-        self.private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
+        let mut private_key_bytes = vec![0u8; self.key_size as usize];
+        self.rng.fill_bytes(&mut private_key_bytes);
+        self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
@@ -211,7 +213,11 @@ impl NowSrd {
 
         self.generator = BigUint::from_bytes_be(&in_packet.generator);
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
-        self.private_key = self.rng.gen_biguint((self.key_size as usize) * 8);
+
+        let mut private_key_bytes = vec![0u8; self.key_size as usize];
+        self.rng.fill_bytes(&mut private_key_bytes);
+        self.private_key = BigUint::from_bytes_be(&private_key_bytes);
+
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
         self.rng.fill_bytes(&mut self.client_nonce);

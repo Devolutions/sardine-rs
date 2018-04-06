@@ -7,6 +7,9 @@ use crypto::mac::Mac;
 use crypto::hmac::Hmac;
 use crypto::sha2::Sha256;
 
+#[cfg(all(target_arch = "wasm32"))]
+use aes_soft;
+
 use message_types::NowAuthSrdMessage;
 use message_types::expand_start;
 use message_types::now_auth_srd_id::NOW_AUTH_SRD_RESPONSE_ID;

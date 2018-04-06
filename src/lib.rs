@@ -1,7 +1,12 @@
 extern crate byteorder;
-extern crate crypto;
-extern crate num;
+extern crate num_bigint;
 extern crate rand;
+
+#[cfg(not(target_arch = "wasm32"))]
+extern crate crypto;
+
+#[cfg(all(target_arch = "wasm32"))]
+extern crate aes_soft;
 
 mod message_types;
 mod now_auth_srd;

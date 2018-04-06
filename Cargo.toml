@@ -5,6 +5,13 @@ authors = ["pdugre"]
 
 [dependencies]
 rand = "0.4"
-rust-crypto = "0.2.36"  # Broken for wasm
-num="0.1"               # Broken for wasm
+num-bigint = {version = "0.1", default_features = false}
+num-traits = {version = "0.1", default_features = false}
+num-integer = {version = "0.1", default_features = false}
 byteorder = "1.2.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rust-crypto = {version = "0.2.36", default_features = false}
+
+[target.'cfg(all(target_arch = "wasm32"))'.dependencies]
+aes-soft = "0.1.0"
