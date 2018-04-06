@@ -3,6 +3,7 @@ use std::fmt;
 use std::io::Error;
 use std::ffi::NulError;
 use std::string::FromUtf8Error;
+use hmac::crypto_mac::InvalidKeyLength;
 use crypto::symmetriccipher::SymmetricCipherError;
 
 #[derive(Debug)]
@@ -81,5 +82,11 @@ impl From<NulError> for NowAuthSrdError {
 impl From<FromUtf8Error> for NowAuthSrdError {
     fn from(_error: FromUtf8Error) -> NowAuthSrdError {
         NowAuthSrdError::InvalidCstr
+    }
+}
+
+impl From<InvalidKeyLength> for NowAuthSrdError {
+    fn from(_error: InvalidKeyLength) -> NowAuthSrdError {
+        NowAuthSrdError::InvalidKeySize
     }
 }

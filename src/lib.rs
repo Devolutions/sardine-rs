@@ -1,6 +1,9 @@
 extern crate byteorder;
+extern crate digest;
+extern crate hmac;
 extern crate num_bigint;
 extern crate rand;
+extern crate sha2;
 
 #[cfg(not(target_arch = "wasm32"))]
 extern crate crypto;

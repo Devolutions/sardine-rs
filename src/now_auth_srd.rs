@@ -1,14 +1,13 @@
 use std;
-use std::io::Read;
+use std::io::{Read, Write};
 
 use rand::{OsRng, Rng};
 
 use num_bigint::BigUint;
 
-use crypto::mac::Mac;
-use crypto::hmac::Hmac;
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
+use digest::Digest;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 
 use Result;
 use now_auth_srd_errors::NowAuthSrdError;
@@ -227,7 +226,7 @@ impl NowSrd {
             .modpow(&self.private_key, &self.prime)
             .to_bytes_be();
 
-        self.derive_keys();
+        self.derive_keys()?;
 
         // Generate cbt
         let cbt;
@@ -235,12 +234,13 @@ impl NowSrd {
         match self.cert_data {
             None => cbt = None,
             Some(ref cert) => {
-                let hash = Sha256::new();
-                let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+                let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+
                 hmac.input(&self.client_nonce);
                 hmac.input(&cert);
+
                 let mut cbt_data: [u8; 32] = [0u8; 32];
-                hmac.raw_result(&mut cbt_data);
+                hmac.result().code().to_vec().write_all(&mut cbt_data)?;
                 cbt = Some(cbt_data);
             }
         }
@@ -267,7 +267,7 @@ impl NowSrd {
             .modpow(&self.private_key, &self.prime)
             .to_bytes_be();
 
-        self.derive_keys();
+        self.derive_keys()?;
 
         in_packet.verify_mac(&self.integrity_key)?;
 
@@ -282,12 +282,13 @@ impl NowSrd {
                 if !in_packet.has_cbt() {
                     return Err(NowAuthSrdError::InvalidCert);
                 }
-                let mut hash = Sha256::new();
-                let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+                let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+
                 hmac.input(&self.client_nonce);
                 hmac.input(&c);
+
                 let mut cbt_data: [u8; 32] = [0u8; 32];
-                hmac.raw_result(&mut cbt_data);
+                hmac.result().code().to_vec().write_all(&mut cbt_data)?;
                 if cbt_data != in_packet.cbt {
                     return Err(NowAuthSrdError::InvalidCbt);
                 }
@@ -300,12 +301,13 @@ impl NowSrd {
         match self.cert_data {
             None => cbt = None,
             Some(ref cert) => {
-                let hash = Sha256::new();
-                let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+                let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+
                 hmac.input(&self.server_nonce);
                 hmac.input(&cert);
+
                 let mut cbt_data: [u8; 32] = [0u8; 32];
-                hmac.raw_result(&mut cbt_data);
+                hmac.result().code().to_vec().write_all(&mut cbt_data)?;
                 cbt = Some(cbt_data);
             }
         }
@@ -333,12 +335,13 @@ impl NowSrd {
                 if !in_packet.has_cbt() {
                     return Err(NowAuthSrdError::InvalidCert);
                 }
-                let mut hash = Sha256::new();
-                let mut hmac = Hmac::<Sha256>::new(hash, &self.integrity_key);
+                let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+
                 hmac.input(&self.server_nonce);
                 hmac.input(&c);
+
                 let mut cbt_data: [u8; 32] = [0u8; 32];
-                hmac.raw_result(&mut cbt_data);
+                hmac.result().code().to_vec().write_all(&mut cbt_data)?;
                 if cbt_data != in_packet.cbt {
                     return Err(NowAuthSrdError::InvalidCbt);
                 }
@@ -418,26 +421,27 @@ impl NowSrd {
         }
     }
 
-    fn derive_keys(&mut self) {
+    fn derive_keys(&mut self) -> Result<()> {
         let mut hash = Sha256::new();
         hash.input(&self.client_nonce);
         hash.input(&self.secret_key);
         hash.input(&self.server_nonce);
 
-        hash.result(&mut self.delegation_key);
+        hash.result().to_vec().write_all(&mut self.delegation_key)?;
 
         hash = Sha256::new();
         hash.input(&self.server_nonce);
         hash.input(&self.secret_key);
         hash.input(&self.client_nonce);
 
-        hash.result(&mut self.integrity_key);
+        hash.result().to_vec().write_all(&mut self.integrity_key)?;
 
         hash = Sha256::new();
         hash.input(&self.client_nonce);
         hash.input(&self.server_nonce);
 
-        hash.result(&mut self.iv);
+        hash.result().to_vec().write_all(&mut self.iv)?;
+        Ok(())
     }
 }
 

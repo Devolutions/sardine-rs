@@ -3,9 +3,8 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crypto::mac::Mac;
-use crypto::hmac::Hmac;
-use crypto::sha2::Sha256;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 
 use message_types::{NowAuthSrdLogonBlob, NowAuthSrdMessage};
 use message_types::now_auth_srd_id::NOW_AUTH_SRD_DELEGATE_ID;
@@ -74,13 +73,14 @@ impl NowAuthSrdDelegate {
     }
 
     fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {
-        let hash = Sha256::new();
-        let mut hmac = Hmac::<Sha256>::new(hash, &integrity_key);
+        let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
 
         let mut buffer = Vec::new();
         self.write_inner_buffer(&mut buffer)?;
+
         hmac.input(&buffer);
-        hmac.raw_result(&mut self.mac);
+        let mac = hmac.result().code().to_vec();
+        self.mac.clone_from_slice(&mac);
         Ok(())
     }
 
@@ -94,19 +94,15 @@ impl NowAuthSrdDelegate {
     }
 
     pub fn verify_mac(&self, integrity_key: &[u8]) -> Result<()> {
-        let hash = Sha256::new();
-        let mut hmac = Hmac::<Sha256>::new(hash, &integrity_key);
+        let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
+
         let mut buffer = Vec::new();
         self.write_inner_buffer(&mut buffer)?;
+
         hmac.input(&buffer);
-
-        let mut mac: [u8; 32] = [0u8; 32];
-        hmac.raw_result(&mut mac);
-
-        if mac == self.mac {
-            Ok(())
-        } else {
-            Err(NowAuthSrdError::InvalidMac)
+        match hmac.verify(&self.mac) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(NowAuthSrdError::InvalidMac),
         }
     }
 
