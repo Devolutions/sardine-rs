@@ -3,9 +3,11 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crypto::aes;
-use crypto::buffer;
-use crypto::blockmodes::NoPadding;
+#[cfg(not(target_arch = "wasm32"))]
+use crypto::{aes, buffer, blockmodes::NoPadding};
+
+#[cfg(all(target_arch = "wasm32"))]
+use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
 
 use message_types::NowAuthSrdMessage;
 use message_types::now_auth_srd_id::NOW_AUTH_SRD_LOGON_BLOB_ID;
@@ -73,6 +75,7 @@ impl NowAuthSrdLogonBlob {
         Ok(obj)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn encrypt_data(
         &mut self,
         username: &[u8],
@@ -92,6 +95,38 @@ impl NowAuthSrdLogonBlob {
         Ok(())
     }
 
+    #[cfg(all(target_arch = "wasm32"))]
+    fn encrypt_data(
+        &mut self,
+        username: &[u8],
+        password: &[u8],
+        iv: &[u8],
+        key: &[u8],
+    ) -> Result<()> {
+        //  The library is really barebone, so we need to reimplement CBC
+        let key = GenericArray::from_slice(key);
+        let cipher = Aes256::new_varkey(key)?;
+
+        let mut data = Vec::new();
+        data.write_all(username)?;
+        data.write_all(password)?;
+
+        let mut result = Vec::with_capacity(256 + 16);
+
+        // First "block is IV
+        iv[0..16].write_all(&mut result);
+
+        for i in 0..256 + 16 {
+            let mut b = GenericArray::clone_from_slice(&xor_block(&result[i*16], &data[i*16..i*16+16]));
+            cipher.encrypt_block(&mut b);
+            b.write_all(&mut result);
+        }
+
+        self.data.clone_from_slice(&result[16..256+16]);
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn decrypt_data(&self, iv: &[u8], key: &[u8]) -> Result<[u8; 256]> {
         let mut data = [0u8; 256];
         {
@@ -103,4 +138,26 @@ impl NowAuthSrdLogonBlob {
         }
         Ok(data)
     }
+
+    #[cfg(all(target_arch = "wasm32"))]
+    pub fn decrypt_data(&self, iv: &[u8], key: &[u8]) -> Result<[u8; 256]> {
+//        let mut data = [0u8; 256];
+//        {
+//            let mut cipher = aes::cbc_decryptor(aes::KeySize::KeySize256, key, iv, NoPadding);
+//            let mut read_buffer = buffer::RefReadBuffer::new(&self.data);
+//            let mut write_buffer = buffer::RefWriteBuffer::new(&mut data);
+//
+//            cipher.decrypt(&mut read_buffer, &mut write_buffer, true)?;
+//        }
+        Ok(data)
+    }
+}
+
+#[cfg(all(target_arch = "wasm32"))]
+fn xor_block(a: &[u8], b: &[u8]) -> [u8; 16]{
+    let result = [0u8; 16];
+    for i in 0..16 {
+        result[i] = a[i] ^ b[i];
+    }
+    result
 }

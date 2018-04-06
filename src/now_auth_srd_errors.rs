@@ -4,6 +4,8 @@ use std::io::Error;
 use std::ffi::NulError;
 use std::string::FromUtf8Error;
 use hmac::crypto_mac::InvalidKeyLength;
+
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::symmetriccipher::SymmetricCipherError;
 
 #[derive(Debug)]
