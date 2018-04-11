@@ -6,14 +6,14 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
-use message_types::NowAuthSrdMessage;
+use message_types::SrdMessage;
 use message_types::expand_start;
-use message_types::now_auth_srd_id::NOW_AUTH_SRD_RESPONSE_ID;
-use now_auth_srd_errors::NowAuthSrdError;
+use message_types::srd_id::SRD_RESPONSE_ID;
+use srd_errors::SrdError;
 
 use Result;
 
-pub struct NowAuthSrdResponse {
+pub struct SrdResponse {
     pub packet_type: u16,
     pub flags: u16,
     pub key_size: u16,
@@ -24,7 +24,7 @@ pub struct NowAuthSrdResponse {
     pub mac: [u8; 32],
 }
 
-impl NowAuthSrdMessage for NowAuthSrdResponse {
+impl SrdMessage for SrdResponse {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
     where
         Self: Sized,
@@ -45,7 +45,7 @@ impl NowAuthSrdMessage for NowAuthSrdResponse {
         buffer.read_exact(&mut cbt)?;
         buffer.read_exact(&mut mac)?;
 
-        Ok(NowAuthSrdResponse {
+        Ok(SrdResponse {
             packet_type,
             flags,
             key_size,
@@ -68,11 +68,11 @@ impl NowAuthSrdMessage for NowAuthSrdResponse {
     }
 
     fn get_id(&self) -> u16 {
-        NOW_AUTH_SRD_RESPONSE_ID
+        SRD_RESPONSE_ID
     }
 }
 
-impl NowAuthSrdResponse {
+impl SrdResponse {
     pub fn new(
         key_size: u16,
         mut public_key: Vec<u8>,
@@ -93,8 +93,8 @@ impl NowAuthSrdResponse {
             }
         }
 
-        let mut response = NowAuthSrdResponse {
-            packet_type: NOW_AUTH_SRD_RESPONSE_ID,
+        let mut response = SrdResponse {
+            packet_type: SRD_RESPONSE_ID,
             flags,
             reserved: 0,
             key_size,
@@ -133,7 +133,7 @@ impl NowAuthSrdResponse {
         hmac.input(&buffer);
         match hmac.verify(&self.mac) {
             Ok(_) => Ok(()),
-            Err(_) => Err(NowAuthSrdError::InvalidMac),
+            Err(_) => Err(SrdError::InvalidMac),
         }
     }
 

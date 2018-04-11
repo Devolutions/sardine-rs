@@ -1,17 +1,17 @@
 use std;
 use message_types::*;
-use message_types::now_auth_srd_id::*;
+use message_types::srd_id::*;
 
 #[test]
 fn negotiate_encoding() {
-    let msg = NowAuthSrdNegotiate {
+    let msg = SrdNegotiate {
         packet_type: 1,
         flags: 256,
         key_size: 2,
         reserved: 257,
     };
 
-    assert_eq!(msg.get_id(), NOW_AUTH_SRD_NEGOTIATE_ID);
+    assert_eq!(msg.get_id(), SRD_NEGOTIATE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
     match msg.write_to(&mut buffer) {
@@ -24,7 +24,7 @@ fn negotiate_encoding() {
 
     let mut cursor = std::io::Cursor::new(buffer);
 
-    match NowAuthSrdNegotiate::read_from(&mut cursor) {
+    match SrdNegotiate::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 1);
             assert_eq!(x.flags, 256);
@@ -37,7 +37,7 @@ fn negotiate_encoding() {
 
 #[test]
 fn challenge_encoding() {
-    let msg = NowAuthSrdChallenge {
+    let msg = SrdChallenge {
         packet_type: 2,
         flags: 0,
         key_size: 256,
@@ -47,7 +47,7 @@ fn challenge_encoding() {
         nonce: [0u8; 32],
     };
 
-    assert_eq!(msg.get_id(), NOW_AUTH_SRD_CHALLENGE_ID);
+    assert_eq!(msg.get_id(), SRD_CHALLENGE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
     match msg.write_to(&mut buffer) {
@@ -63,7 +63,7 @@ fn challenge_encoding() {
 
     let mut cursor = std::io::Cursor::new(buffer);
 
-    match NowAuthSrdChallenge::read_from(&mut cursor) {
+    match SrdChallenge::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 2);
             assert_eq!(x.flags, 0);
@@ -79,7 +79,7 @@ fn challenge_encoding() {
 
 #[test]
 fn response_encoding() {
-    let msg = NowAuthSrdResponse {
+    let msg = SrdResponse {
         packet_type: 3,
         flags: 0,
         key_size: 256,
@@ -90,7 +90,7 @@ fn response_encoding() {
         mac: [0u8; 32],
     };
 
-    assert_eq!(msg.get_id(), NOW_AUTH_SRD_RESPONSE_ID);
+    assert_eq!(msg.get_id(), SRD_RESPONSE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
     match msg.write_to(&mut buffer) {
@@ -106,7 +106,7 @@ fn response_encoding() {
 
     let mut cursor = std::io::Cursor::new(buffer);
 
-    match NowAuthSrdResponse::read_from(&mut cursor) {
+    match SrdResponse::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 3);
             assert_eq!(x.flags, 0);
@@ -123,7 +123,7 @@ fn response_encoding() {
 
 #[test]
 fn confirm_encoding() {
-    let msg = NowAuthSrdConfirm {
+    let msg = SrdConfirm {
         packet_type: 4,
         flags: 0,
         reserved: 0,
@@ -131,7 +131,7 @@ fn confirm_encoding() {
         mac: [0u8; 32],
     };
 
-    assert_eq!(msg.get_id(), NOW_AUTH_SRD_CONFIRM_ID);
+    assert_eq!(msg.get_id(), SRD_CONFIRM_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
     match msg.write_to(&mut buffer) {
@@ -147,7 +147,7 @@ fn confirm_encoding() {
 
     let mut cursor = std::io::Cursor::new(buffer);
 
-    match NowAuthSrdConfirm::read_from(&mut cursor) {
+    match SrdConfirm::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 4);
             assert_eq!(x.flags, 0);
@@ -161,14 +161,14 @@ fn confirm_encoding() {
 
 #[test]
 fn delegate_encoding() {
-    let blob = NowAuthSrdLogonBlob {
+    let blob = SrdLogonBlob {
         packet_type: 1,
         flags: 0,
         size: 256,
         data: [0u8; 256],
     };
 
-    let msg = NowAuthSrdDelegate {
+    let msg = SrdDelegate {
         packet_type: 5,
         flags: 0,
         reserved: 0,
@@ -176,8 +176,8 @@ fn delegate_encoding() {
         mac: [0u8; 32],
     };
 
-    assert_eq!(msg.blob.get_id(), NOW_AUTH_SRD_LOGON_BLOB_ID);
-    assert_eq!(msg.get_id(), NOW_AUTH_SRD_DELEGATE_ID);
+    assert_eq!(msg.blob.get_id(), SRD_LOGON_BLOB_ID);
+    assert_eq!(msg.get_id(), SRD_DELEGATE_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
     match msg.write_to(&mut buffer) {
@@ -195,7 +195,7 @@ fn delegate_encoding() {
 
     let mut cursor = std::io::Cursor::new(buffer);
 
-    match NowAuthSrdDelegate::read_from(&mut cursor) {
+    match SrdDelegate::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 5);
             assert_eq!(x.flags, 0);
@@ -211,7 +211,7 @@ fn delegate_encoding() {
 
 #[test]
 fn result_encoding() {
-    let msg = NowAuthSrdResult {
+    let msg = SrdResult {
         packet_type: 6,
         flags: 0,
         reserved: 0,
@@ -219,7 +219,7 @@ fn result_encoding() {
         mac: [0u8; 32],
     };
 
-    assert_eq!(msg.get_id(), NOW_AUTH_SRD_RESULT_ID);
+    assert_eq!(msg.get_id(), SRD_RESULT_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
     match msg.write_to(&mut buffer) {
@@ -235,7 +235,7 @@ fn result_encoding() {
 
     let mut cursor = std::io::Cursor::new(buffer);
 
-    match NowAuthSrdResult::read_from(&mut cursor) {
+    match SrdResult::read_from(&mut cursor) {
         Ok(x) => {
             assert_eq!(x.packet_type, 6);
             assert_eq!(x.flags, 0);

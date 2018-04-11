@@ -6,20 +6,20 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
-use message_types::{NowAuthSrdLogonBlob, NowAuthSrdMessage};
-use message_types::now_auth_srd_id::NOW_AUTH_SRD_DELEGATE_ID;
+use message_types::SrdMessage;
+use message_types::srd_id::SRD_CONFIRM_ID;
 use Result;
-use now_auth_srd_errors::NowAuthSrdError;
+use srd_errors::SrdError;
 
-pub struct NowAuthSrdDelegate {
+pub struct SrdConfirm {
     pub packet_type: u16,
     pub flags: u16,
     pub reserved: u32,
-    pub blob: NowAuthSrdLogonBlob,
+    pub cbt: [u8; 32],
     pub mac: [u8; 32],
 }
 
-impl NowAuthSrdMessage for NowAuthSrdDelegate {
+impl SrdMessage for SrdConfirm {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
     where
         Self: Sized,
@@ -28,17 +28,17 @@ impl NowAuthSrdMessage for NowAuthSrdDelegate {
         let flags = buffer.read_u16::<LittleEndian>()?;
         let reserved = buffer.read_u32::<LittleEndian>()?;
 
-        let blob = NowAuthSrdLogonBlob::read_from(buffer)?;
-
+        let mut cbt = [0u8; 32];
         let mut mac = [0u8; 32];
 
+        buffer.read_exact(&mut cbt)?;
         buffer.read_exact(&mut mac)?;
 
-        Ok(NowAuthSrdDelegate {
+        Ok(SrdConfirm {
             packet_type,
             flags,
             reserved,
-            blob,
+            cbt,
             mac,
         })
     }
@@ -50,26 +50,40 @@ impl NowAuthSrdMessage for NowAuthSrdDelegate {
     }
 
     fn get_size(&self) -> usize {
-        40usize + self.blob.get_size()
+        72usize
     }
 
     fn get_id(&self) -> u16 {
-        NOW_AUTH_SRD_DELEGATE_ID
+        SRD_CONFIRM_ID
     }
 }
 
-impl NowAuthSrdDelegate {
-    pub fn new(blob: NowAuthSrdLogonBlob, integrity_key: &[u8]) -> Result<Self> {
-        let mut response = NowAuthSrdDelegate {
-            packet_type: NOW_AUTH_SRD_DELEGATE_ID,
-            flags: 0x01,
+impl SrdConfirm {
+    pub fn new(cbt_opt: Option<[u8; 32]>, integrity_key: &[u8]) -> Result<Self> {
+        let mut flags = 0x01u16;
+        let mut cbt = [0u8; 32];
+
+        match cbt_opt {
+            None => (),
+            Some(c) => {
+                flags = 0x03;
+                cbt = c;
+            }
+        }
+        let mut response = SrdConfirm {
+            packet_type: SRD_CONFIRM_ID,
+            flags,
             reserved: 0,
-            blob,
+            cbt,
             mac: [0u8; 32],
         };
 
         response.compute_mac(&integrity_key)?;
         Ok(response)
+    }
+
+    pub fn has_cbt(&self) -> bool {
+        self.flags & 0x02 == 0x02
     }
 
     fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {
@@ -88,7 +102,7 @@ impl NowAuthSrdDelegate {
         buffer.write_u16::<LittleEndian>(self.packet_type)?;
         buffer.write_u16::<LittleEndian>(self.flags)?;
         buffer.write_u32::<LittleEndian>(self.reserved)?;
-        self.blob.write_to(buffer)?;
+        buffer.write_all(&self.cbt)?;
 
         Ok(())
     }
@@ -102,11 +116,7 @@ impl NowAuthSrdDelegate {
         hmac.input(&buffer);
         match hmac.verify(&self.mac) {
             Ok(_) => Ok(()),
-            Err(_) => Err(NowAuthSrdError::InvalidMac),
+            Err(_) => Err(SrdError::InvalidMac),
         }
-    }
-
-    pub fn get_data(&self, iv: &[u8], key: &[u8]) -> Result<[u8; 256]> {
-        Ok(self.blob.decrypt_data(iv, key)?)
     }
 }

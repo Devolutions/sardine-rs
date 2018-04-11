@@ -3,12 +3,12 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::NowAuthSrdMessage;
+use message_types::SrdMessage;
 use message_types::expand_start;
-use message_types::now_auth_srd_id::NOW_AUTH_SRD_CHALLENGE_ID;
+use message_types::srd_id::SRD_CHALLENGE_ID;
 use Result;
 
-pub struct NowAuthSrdChallenge {
+pub struct SrdChallenge {
     pub packet_type: u16,
     pub flags: u16,
     pub key_size: u16,
@@ -18,7 +18,7 @@ pub struct NowAuthSrdChallenge {
     pub nonce: [u8; 32],
 }
 
-impl NowAuthSrdMessage for NowAuthSrdChallenge {
+impl SrdMessage for SrdChallenge {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
     where
         Self: Sized,
@@ -37,7 +37,7 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge {
         let mut nonce = [0u8; 32];
         buffer.read_exact(&mut nonce)?;
 
-        Ok(NowAuthSrdChallenge {
+        Ok(SrdChallenge {
             packet_type,
             flags,
             key_size,
@@ -65,24 +65,24 @@ impl NowAuthSrdMessage for NowAuthSrdChallenge {
     }
 
     fn get_id(&self) -> u16 {
-        NOW_AUTH_SRD_CHALLENGE_ID
+        SRD_CHALLENGE_ID
     }
 }
 
-impl NowAuthSrdChallenge {
+impl SrdChallenge {
     pub fn new(
         key_size: u16,
         mut generator: Vec<u8>,
         mut prime: Vec<u8>,
         mut public_key: Vec<u8>,
         nonce: [u8; 32],
-    ) -> NowAuthSrdChallenge {
+    ) -> SrdChallenge {
         expand_start(&mut generator, 2);
         expand_start(&mut prime, (key_size / 8) as usize);
         expand_start(&mut public_key, (key_size / 8) as usize);
 
-        NowAuthSrdChallenge {
-            packet_type: NOW_AUTH_SRD_CHALLENGE_ID,
+        SrdChallenge {
+            packet_type: SRD_CHALLENGE_ID,
             flags: 0,
             key_size,
             generator,

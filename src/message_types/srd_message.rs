@@ -1,7 +1,7 @@
 use std;
 use Result;
 
-pub trait NowAuthSrdMessage {
+pub trait SrdMessage {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
     where
         Self: Sized;

@@ -1,4 +1,4 @@
-use now_auth_srd::NowSrd;
+use srd::Srd;
 
 static TEST_CERT_DATA: &'static [u8] =
     b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x03\x02\x01\x02\x02\x10\x16
@@ -59,8 +59,8 @@ fn verify_credentials_callback(username: &String, password: &String) -> bool {
 
 #[test]
 fn good_login() {
-    let mut client: NowSrd = NowSrd::new(false).unwrap();
-    let mut server: NowSrd = NowSrd::new(true).unwrap();
+    let mut client: Srd = Srd::new(false).unwrap();
+    let mut server: Srd = Srd::new(true).unwrap();
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();

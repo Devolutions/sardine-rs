@@ -9,18 +9,18 @@ use crypto::{aes, buffer, blockmodes::NoPadding};
 #[cfg(not(target_arch = "wasm32"))]
 use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
 
-use message_types::NowAuthSrdMessage;
-use message_types::now_auth_srd_id::NOW_AUTH_SRD_LOGON_BLOB_ID;
+use message_types::SrdMessage;
+use message_types::srd_id::SRD_LOGON_BLOB_ID;
 use Result;
 
-pub struct NowAuthSrdLogonBlob {
+pub struct SrdLogonBlob {
     pub packet_type: u8,
     pub flags: u8,
     pub size: u16,
     pub data: [u8; 256],
 }
 
-impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
+impl SrdMessage for SrdLogonBlob {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
     where
         Self: Sized,
@@ -33,7 +33,7 @@ impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
 
         buffer.read_exact(&mut data)?;
 
-        Ok(NowAuthSrdLogonBlob {
+        Ok(SrdLogonBlob {
             packet_type,
             flags,
             size,
@@ -54,19 +54,19 @@ impl NowAuthSrdMessage for NowAuthSrdLogonBlob {
     }
 
     fn get_id(&self) -> u16 {
-        NOW_AUTH_SRD_LOGON_BLOB_ID
+        SRD_LOGON_BLOB_ID
     }
 }
 
-impl NowAuthSrdLogonBlob {
+impl SrdLogonBlob {
     pub fn new(
         username: &[u8],
         password: &[u8],
         iv: &[u8],
         key: &[u8],
-    ) -> Result<NowAuthSrdLogonBlob> {
-        let mut obj = NowAuthSrdLogonBlob {
-            packet_type: NOW_AUTH_SRD_LOGON_BLOB_ID as u8,
+    ) -> Result<SrdLogonBlob> {
+        let mut obj = SrdLogonBlob {
+            packet_type: SRD_LOGON_BLOB_ID as u8,
             flags: 0,
             size: 256,
             data: [0u8; 256],
