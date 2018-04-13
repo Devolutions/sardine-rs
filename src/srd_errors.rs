@@ -5,16 +5,16 @@ use std::ffi::NulError;
 use std::string::FromUtf8Error;
 use hmac::crypto_mac::InvalidKeyLength;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(target_arch = "wasm32"))]
 use aes_soft;
 
-#[cfg(all(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::symmetriccipher::SymmetricCipherError;
 
 #[derive(Debug)]
 pub enum SrdError {
     Io(Error),
-    #[cfg(all(target_arch = "wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     Crypto(SymmetricCipherError),
     Ffi(NulError),
     BadSequence,
@@ -31,7 +31,7 @@ impl fmt::Display for SrdError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             &SrdError::Io(ref error) => error.fmt(f),
-            #[cfg(all(target_arch = "wasm32"))]
+            #[cfg(not(target_arch = "wasm32"))]
             &SrdError::Crypto(ref _error) => write!(f, "Crypto error"),
             &SrdError::Ffi(ref _error) => write!(f, "FFI error"),
             &SrdError::BadSequence => write!(f, "Sequence error"),
@@ -50,10 +50,8 @@ impl std::error::Error for SrdError {
     fn description(&self) -> &str {
         match *self {
             SrdError::Io(ref error) => error.description(),
-            #[cfg(all(target_arch = "wasm32"))]
-            SrdError::Crypto(ref _error) => {
-                "There was a problem while encrypting or decrypting"
-            }
+            #[cfg(not(target_arch = "wasm32"))]
+            SrdError::Crypto(ref _error) => "There was a problem while encrypting or decrypting",
             SrdError::Ffi(ref _error) => {
                 "There was an error while manipulating null-terminated strings"
             }
@@ -75,7 +73,7 @@ impl From<Error> for SrdError {
     }
 }
 
-#[cfg(all(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<SymmetricCipherError> for SrdError {
     fn from(error: SymmetricCipherError) -> SrdError {
         SrdError::Crypto(error)
@@ -100,7 +98,7 @@ impl From<InvalidKeyLength> for SrdError {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(target_arch = "wasm32"))]
 impl From<aes_soft::block_cipher_trait::InvalidKeyLength> for SrdError {
     fn from(_error: aes_soft::block_cipher_trait::InvalidKeyLength) -> SrdError {
         SrdError::InvalidKeySize

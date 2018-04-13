@@ -3,10 +3,10 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-#[cfg(all(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::{aes, buffer, blockmodes::NoPadding};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(target_arch = "wasm32"))]
 use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
 
 use message_types::SrdMessage;
@@ -59,12 +59,7 @@ impl SrdMessage for SrdLogonBlob {
 }
 
 impl SrdLogonBlob {
-    pub fn new(
-        username: &[u8],
-        password: &[u8],
-        iv: &[u8],
-        key: &[u8],
-    ) -> Result<SrdLogonBlob> {
+    pub fn new(username: &[u8], password: &[u8], iv: &[u8], key: &[u8]) -> Result<SrdLogonBlob> {
         let mut obj = SrdLogonBlob {
             packet_type: SRD_LOGON_BLOB_ID as u8,
             flags: 0,
@@ -75,7 +70,7 @@ impl SrdLogonBlob {
         Ok(obj)
     }
 
-    #[cfg(all(target_arch = "wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     fn encrypt_data(
         &mut self,
         username: &[u8],
@@ -95,7 +90,7 @@ impl SrdLogonBlob {
         Ok(())
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(target_arch = "wasm32"))]
     fn encrypt_data(
         &mut self,
         username: &[u8],
@@ -129,7 +124,7 @@ impl SrdLogonBlob {
         Ok(())
     }
 
-    #[cfg(all(target_arch = "wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn decrypt_data(&self, iv: &[u8], key: &[u8]) -> Result<[u8; 256]> {
         let mut data = [0u8; 256];
         {
@@ -142,7 +137,7 @@ impl SrdLogonBlob {
         Ok(data)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(target_arch = "wasm32"))]
     pub fn decrypt_data(&self, iv: &[u8], key: &[u8]) -> Result<[u8; 256]> {
         let cipher = Aes256::new_varkey(key)?;
 
@@ -186,7 +181,7 @@ impl SrdLogonBlob {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(target_arch = "wasm32"))]
 fn xor_block(a: &[u8], b: &[u8]) -> [u8; 16] {
     let mut result = [0u8; 16];
     for i in 0..16 {
