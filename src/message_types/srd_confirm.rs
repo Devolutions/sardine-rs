@@ -3,18 +3,15 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use hmac::{Hmac, Mac};
-use sha2::Sha256;
-
-use message_types::SrdMessage;
-use message_types::srd_id::SRD_CONFIRM_ID;
+use message_types::{SrdMac, SrdMessage, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
+                    srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
 use Result;
-use srd_errors::SrdError;
 
 pub struct SrdConfirm {
-    pub packet_type: u16,
+    pub signature: u32,
+    pub packet_type: u8,
+    pub seq_num: u8,
     pub flags: u16,
-    pub reserved: u32,
     pub cbt: [u8; 32],
     pub mac: [u8; 32],
 }
@@ -24,9 +21,10 @@ impl SrdMessage for SrdConfirm {
     where
         Self: Sized,
     {
-        let packet_type = buffer.read_u16::<LittleEndian>()?;
+        let signature = buffer.read_u32::<LittleEndian>()?;
+        let packet_type = buffer.read_u8()?;
+        let seq_num = buffer.read_u8()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
-        let reserved = buffer.read_u32::<LittleEndian>()?;
 
         let mut cbt = [0u8; 32];
         let mut mac = [0u8; 32];
@@ -35,9 +33,10 @@ impl SrdMessage for SrdConfirm {
         buffer.read_exact(&mut mac)?;
 
         Ok(SrdConfirm {
+            signature,
             packet_type,
+            seq_num,
             flags,
-            reserved,
             cbt,
             mac,
         })
@@ -49,31 +48,48 @@ impl SrdMessage for SrdConfirm {
         Ok(())
     }
 
-    fn get_size(&self) -> usize {
-        72usize
+    fn get_id(&self) -> u8 {
+        SRD_CONFIRM_MSG_ID
+    }
+}
+
+impl SrdMac for SrdConfirm {
+    fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
+        buffer.write_u32::<LittleEndian>(self.signature)?;
+        buffer.write_u8(self.packet_type)?;
+        buffer.write_u8(self.seq_num)?;
+        buffer.write_u16::<LittleEndian>(self.flags)?;
+        buffer.write_all(&self.cbt)?;
+
+        Ok(())
     }
 
-    fn get_id(&self) -> u16 {
-        SRD_CONFIRM_ID
+    fn get_mac(&self) -> &[u8] {
+        &self.mac
+    }
+
+    fn set_mac(&mut self, mac: &[u8]) {
+        self.mac.clone_from_slice(mac);
     }
 }
 
 impl SrdConfirm {
     pub fn new(cbt_opt: Option<[u8; 32]>, integrity_key: &[u8]) -> Result<Self> {
-        let mut flags = 0x01u16;
         let mut cbt = [0u8; 32];
+        let mut flags = SRD_FLAG_MAC;
 
         match cbt_opt {
             None => (),
             Some(c) => {
-                flags = 0x03;
+                flags |= SRD_FLAG_CBT;
                 cbt = c;
             }
         }
         let mut response = SrdConfirm {
-            packet_type: SRD_CONFIRM_ID,
+            signature: SRD_SIGNATURE,
+            packet_type: SRD_CONFIRM_MSG_ID,
+            seq_num: 3,
             flags,
-            reserved: 0,
             cbt,
             mac: [0u8; 32],
         };
@@ -83,40 +99,6 @@ impl SrdConfirm {
     }
 
     pub fn has_cbt(&self) -> bool {
-        self.flags & 0x02 == 0x02
-    }
-
-    fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {
-        let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
-
-        let mut buffer = Vec::new();
-        self.write_inner_buffer(&mut buffer)?;
-
-        hmac.input(&buffer);
-        let mac = hmac.result().code().to_vec();
-        self.mac.clone_from_slice(&mac);
-        Ok(())
-    }
-
-    fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
-        buffer.write_u16::<LittleEndian>(self.packet_type)?;
-        buffer.write_u16::<LittleEndian>(self.flags)?;
-        buffer.write_u32::<LittleEndian>(self.reserved)?;
-        buffer.write_all(&self.cbt)?;
-
-        Ok(())
-    }
-
-    pub fn verify_mac(&self, integrity_key: &[u8]) -> Result<()> {
-        let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
-
-        let mut buffer = Vec::new();
-        self.write_inner_buffer(&mut buffer)?;
-
-        hmac.input(&buffer);
-        match hmac.verify(&self.mac) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(SrdError::InvalidMac),
-        }
+        self.flags & SRD_FLAG_CBT == SRD_FLAG_CBT
     }
 }

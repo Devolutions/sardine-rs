@@ -50,12 +50,8 @@ static TEST_CERT_DATA: &'static [u8] =
 	\x43\x3f\xed\xc0\x75\x76\x19\x22\x59\xd1\xcd\x28\x75\xda\xf5\x02
 	\x38\xd2\x5a\xc3\x23\x74\x2c\x40\xc7\xf1\xf1\xad\xdf\x6c";
 
-const TEST_USERNAME: &'static str = "john.doe";
-const TEST_PASSWORD: &'static str = "Dummy123";
-
-fn verify_credentials_callback(username: &String, password: &String) -> bool {
-    *username == TEST_USERNAME.to_string() && *password == TEST_PASSWORD.to_string()
-}
+//const TEST_USERNAME: &'static str = "john.doe";
+//const TEST_PASSWORD: &'static str = "Dummy123";
 
 #[test]
 fn good_login() {
@@ -69,11 +65,7 @@ fn good_login() {
     client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
     server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
 
-    client
-        .set_credentials(TEST_USERNAME.to_string(), TEST_PASSWORD.to_string())
-        .unwrap();
-
-    server.set_credentials_callback(verify_credentials_callback);
+    client.set_blob(vec![0, 10, 2, 4]);
 
     let mut client_status: bool = false;
     let mut server_status: bool = false;
@@ -94,6 +86,6 @@ fn good_login() {
     assert!(client_status);
     assert!(server_status);
 
-    assert_eq!(server.get_username(), TEST_USERNAME);
-    assert_eq!(server.get_password(), TEST_PASSWORD);
+    //assert_eq!(server.get_username(), TEST_USERNAME);
+    //assert_eq!(server.get_password(), TEST_PASSWORD);
 }

@@ -1,5 +1,5 @@
 use std;
-use std::io::{Read, Write};
+use std::io::Write;
 
 use rand::{OsRng, Rng};
 
@@ -15,13 +15,11 @@ use message_types::*;
 use dh_params::SRD_DH_PARAMS;
 
 pub struct Srd {
-    credentials_callback: Option<fn(&String, &String) -> bool>,
+    blob: Option<Vec<u8>>,
 
     is_server: bool,
     key_size: u16,
     seq_num: u16,
-    username: String,
-    password: String,
 
     cert_data: Option<Vec<u8>>,
 
@@ -43,13 +41,11 @@ pub struct Srd {
 impl Srd {
     pub fn new(is_server: bool) -> Result<Srd> {
         Ok(Srd {
-            credentials_callback: None,
+            blob: None,
 
             is_server,
             key_size: 256,
             seq_num: 0,
-            username: "".to_string(),
-            password: "".to_string(),
 
             cert_data: None,
 
@@ -69,26 +65,16 @@ impl Srd {
         })
     }
 
-    pub fn get_username(&self) -> String {
-        self.username.clone()
+    pub fn get_blob(&self) -> Option<Vec<u8>> {
+        self.blob.clone()
     }
 
-    pub fn get_password(&self) -> String {
-        self.password.clone()
-    }
-
-    pub fn set_credentials_callback(&mut self, callback: fn(&String, &String) -> bool) {
-        self.credentials_callback = Some(callback)
+    pub fn set_blob(&mut self, blob: Vec<u8>) {
+        self.blob = Some(blob)
     }
 
     pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
         self.cert_data = Some(buffer);
-        Ok(())
-    }
-
-    pub fn set_credentials(&mut self, username: String, password: String) -> Result<()> {
-        self.username = username;
-        self.password = password;
         Ok(())
     }
 
@@ -109,7 +95,7 @@ impl Srd {
             msg.get_id() / 2
         };
 
-        if seq_num == self.seq_num {
+        if seq_num as u16 == self.seq_num {
             msg.write_to(buffer)?;
             Ok(())
         } else {
@@ -130,7 +116,7 @@ impl Srd {
             packet.get_id() / 2
         };
 
-        if seq_num == self.seq_num {
+        if seq_num as u16 == self.seq_num {
             Ok(packet)
         } else {
             Err(SrdError::BadSequence)
@@ -147,20 +133,17 @@ impl Srd {
                 0 => self.server_0(input_data, output_data)?,
                 1 => self.server_1(input_data, output_data)?,
                 2 => {
-                    self.server_2(input_data, output_data)?;
-                    self.seq_num += 1;
+                    self.server_2(input_data)?;
                     return Ok(true);
                 }
-                3 => return Ok(true),
                 _ => return Err(SrdError::BadSequence),
             }
         } else {
             match self.seq_num {
                 0 => self.client_0(output_data)?,
                 1 => self.client_1(input_data, output_data)?,
-                2 => self.client_2(input_data, output_data)?,
-                3 => {
-                    self.client_3(input_data)?;
+                2 => {
+                    self.client_2(input_data, output_data)?;
                     return Ok(true);
                 }
                 _ => return Err(SrdError::BadSequence),
@@ -173,7 +156,7 @@ impl Srd {
     // Client negotiate
     fn client_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
-        let msg = SrdNegotiate::new(self.key_size);
+        let msg = SrdInitiate::new(self.key_size);
         self.write_msg(&msg, &mut output_data)?;
         Ok(())
     }
@@ -181,7 +164,7 @@ impl Srd {
     // Server negotiate -> challenge
     fn server_0(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
-        let in_packet = self.read_msg::<SrdNegotiate>(input_data)?;
+        let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
         self.set_key_size(in_packet.key_size)?;
         self.find_dh_parameters()?;
 
@@ -194,7 +177,7 @@ impl Srd {
 
         self.rng.fill_bytes(&mut self.server_nonce);
 
-        let out_packet = SrdChallenge::new(
+        let out_packet = SrdOffer::new(
             in_packet.key_size,
             self.generator.to_bytes_be(),
             self.prime.to_bytes_be(),
@@ -208,7 +191,7 @@ impl Srd {
     // Client challenge -> reponse
     fn client_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         //Challenge
-        let in_packet = self.read_msg::<SrdChallenge>(input_data)?;
+        let in_packet = self.read_msg::<SrdOffer>(input_data)?;
 
         self.generator = BigUint::from_bytes_be(&in_packet.generator);
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
@@ -245,7 +228,7 @@ impl Srd {
             }
         }
 
-        let out_packet = SrdResponse::new(
+        let out_packet = SrdAccept::new(
             in_packet.key_size,
             public_key.to_bytes_be(),
             self.client_nonce,
@@ -260,7 +243,7 @@ impl Srd {
     // Server response -> confirm
     fn server_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Response
-        let in_packet = self.read_msg::<SrdResponse>(input_data)?;
+        let in_packet = self.read_msg::<SrdAccept>(input_data)?;
         self.client_nonce = in_packet.nonce;
 
         self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
@@ -348,56 +331,29 @@ impl Srd {
             }
         }
 
+        let message;
         // Delegate
-        let logon_blob = SrdLogonBlob::new(
-            &convert_and_pad_to_cstr(&mut self.rng, &self.username)?,
-            &convert_and_pad_to_cstr(&mut self.rng, &self.password)?,
-            &self.iv[0..16],
-            &self.delegation_key,
-        )?;
-
-        let message = SrdDelegate::new(logon_blob, &self.integrity_key)?;
+        match self.blob {
+            None => {
+                return Err(SrdError::InvalidKeySize);
+            } //TODO create error
+            Some(ref b) => {
+                message = SrdDelegate::new(b, &self.integrity_key, &self.delegation_key, &self.iv)?;
+            }
+        }
         self.write_msg(&message, &mut output_data)?;
         Ok(())
     }
 
     // Server delegate -> result
-    fn server_2(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
+    fn server_2(&mut self, input_data: &mut Vec<u8>) -> Result<()> {
         // Receive delegate and verify credentials...
         let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
         in_packet.verify_mac(&self.integrity_key)?;
 
-        let credentials_data = in_packet.get_data(&self.iv[0..16], &self.delegation_key)?;
+        self.blob = Some(in_packet.get_data(&self.iv[0..16], &self.delegation_key)?);
 
-        self.username = convert_and_unpad_from_cstr(&credentials_data[0..128])?;
-        self.password = convert_and_unpad_from_cstr(&credentials_data[128..256])?;
-
-        match self.credentials_callback {
-            Some(c) => {
-                if c(&self.username, &self.password) {
-                    let message = SrdResult::new(0, &self.integrity_key)?;
-                    self.write_msg(&message, &mut output_data)?;
-                    Ok(())
-                } else {
-                    let message = SrdResult::new(1, &self.integrity_key)?;
-                    self.write_msg(&message, &mut output_data)?;
-                    Err(SrdError::InvalidCredentials)
-                }
-            }
-            None => Err(SrdError::MissingCallback),
-        }
-    }
-
-    // Client result
-    fn client_3(&mut self, input_data: &mut Vec<u8>) -> Result<()> {
-        let in_packet = self.read_msg::<SrdResult>(input_data)?;
-        in_packet.verify_mac(&self.integrity_key)?;
-
-        if in_packet.status != 0 {
-            Err(SrdError::InvalidCredentials)
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     fn find_dh_parameters(&mut self) -> Result<()> {
@@ -441,11 +397,11 @@ impl Srd {
         hash.input(&self.client_nonce);
         hash.input(&self.server_nonce);
 
-        self.iv.clone_from_slice(&hash.result().to_vec());
+        self.iv.clone_from_slice(&hash.result().to_vec()[0..16]);
     }
 }
 
-fn convert_and_pad_to_cstr(rng: &mut OsRng, str: &str) -> Result<[u8; 128]> {
+/*fn convert_and_pad_to_cstr(rng: &mut OsRng, str: &str) -> Result<[u8; 128]> {
     //TODO: Block large username and password
     let mut cstr = [0u8; 128];
     std::ffi::CString::new(str)?
@@ -471,4 +427,4 @@ fn convert_and_unpad_from_cstr(data: &[u8]) -> Result<String> {
         Some(t) => t.0,
     };
     Ok(String::from_utf8(data[0..index].to_vec())?)
-}
+}*/

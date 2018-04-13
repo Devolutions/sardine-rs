@@ -3,18 +3,14 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use hmac::{Hmac, Mac};
-use sha2::Sha256;
-
-use message_types::SrdMessage;
-use message_types::expand_start;
-use message_types::srd_id::SRD_RESPONSE_ID;
-use srd_errors::SrdError;
-
+use message_types::{expand_start, SrdMac, SrdMessage, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
+                    srd_msg_id::SRD_ACCEPT_MSG_ID, SRD_SIGNATURE};
 use Result;
 
-pub struct SrdResponse {
-    pub packet_type: u16,
+pub struct SrdAccept {
+    pub signature: u32,
+    pub packet_type: u8,
+    pub seq_num: u8,
     pub flags: u16,
     pub key_size: u16,
     pub reserved: u16,
@@ -24,12 +20,14 @@ pub struct SrdResponse {
     pub mac: [u8; 32],
 }
 
-impl SrdMessage for SrdResponse {
+impl SrdMessage for SrdAccept {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
     where
         Self: Sized,
     {
-        let packet_type = buffer.read_u16::<LittleEndian>()?;
+        let signature = buffer.read_u32::<LittleEndian>()?;
+        let packet_type = buffer.read_u8()?;
+        let seq_num = buffer.read_u8()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
         let key_size = buffer.read_u16::<LittleEndian>()?;
         let reserved = buffer.read_u16::<LittleEndian>()?;
@@ -45,8 +43,10 @@ impl SrdMessage for SrdResponse {
         buffer.read_exact(&mut cbt)?;
         buffer.read_exact(&mut mac)?;
 
-        Ok(SrdResponse {
+        Ok(SrdAccept {
+            signature,
             packet_type,
+            seq_num,
             flags,
             key_size,
             reserved,
@@ -63,16 +63,36 @@ impl SrdMessage for SrdResponse {
         Ok(())
     }
 
-    fn get_size(&self) -> usize {
-        104usize + self.key_size as usize
-    }
-
-    fn get_id(&self) -> u16 {
-        SRD_RESPONSE_ID
+    fn get_id(&self) -> u8 {
+        SRD_ACCEPT_MSG_ID
     }
 }
 
-impl SrdResponse {
+impl SrdMac for SrdAccept {
+    fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
+        buffer.write_u32::<LittleEndian>(self.signature)?;
+        buffer.write_u8(self.packet_type)?;
+        buffer.write_u8(self.seq_num)?;
+        buffer.write_u16::<LittleEndian>(self.flags)?;
+        buffer.write_u16::<LittleEndian>(self.key_size)?;
+        buffer.write_u16::<LittleEndian>(self.reserved)?;
+        buffer.write_all(&self.public_key)?;
+        buffer.write_all(&self.nonce)?;
+        buffer.write_all(&self.cbt)?;
+
+        Ok(())
+    }
+
+    fn get_mac(&self) -> &[u8] {
+        &self.mac
+    }
+
+    fn set_mac(&mut self, mac: &[u8]) {
+        self.mac.clone_from_slice(mac);
+    }
+}
+
+impl SrdAccept {
     pub fn new(
         key_size: u16,
         mut public_key: Vec<u8>,
@@ -81,20 +101,21 @@ impl SrdResponse {
         integrity_key: &[u8],
     ) -> Result<Self> {
         expand_start(&mut public_key, key_size as usize);
-
-        let mut flags = 0x01u16;
         let mut cbt = [0u8; 32];
+        let mut flags = SRD_FLAG_MAC;
 
         match cbt_opt {
             None => (),
             Some(c) => {
-                flags = 0x03;
+                flags |= SRD_FLAG_CBT;
                 cbt = c;
             }
         }
 
-        let mut response = SrdResponse {
-            packet_type: SRD_RESPONSE_ID,
+        let mut response = SrdAccept {
+            signature: SRD_SIGNATURE,
+            packet_type: SRD_ACCEPT_MSG_ID,
+            seq_num: 2,
             flags,
             reserved: 0,
             key_size,
@@ -110,42 +131,5 @@ impl SrdResponse {
 
     pub fn has_cbt(&self) -> bool {
         self.flags & 0x02 == 0x02
-    }
-
-    fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {
-        let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
-
-        let mut buffer = Vec::new();
-        self.write_inner_buffer(&mut buffer)?;
-
-        hmac.input(&buffer);
-        let mac = hmac.result().code().to_vec();
-        self.mac.clone_from_slice(&mac);
-        Ok(())
-    }
-
-    pub fn verify_mac(&self, integrity_key: &[u8]) -> Result<()> {
-        let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
-
-        let mut buffer = Vec::new();
-        self.write_inner_buffer(&mut buffer)?;
-
-        hmac.input(&buffer);
-        match hmac.verify(&self.mac) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(SrdError::InvalidMac),
-        }
-    }
-
-    fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
-        buffer.write_u16::<LittleEndian>(self.packet_type)?;
-        buffer.write_u16::<LittleEndian>(self.flags)?;
-        buffer.write_u16::<LittleEndian>(self.key_size)?;
-        buffer.write_u16::<LittleEndian>(self.reserved)?;
-        buffer.write_all(&self.public_key)?;
-        buffer.write_all(&self.nonce)?;
-        buffer.write_all(&self.cbt)?;
-
-        Ok(())
     }
 }
