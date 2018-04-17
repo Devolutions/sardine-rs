@@ -128,11 +128,7 @@ impl Srd {
         Ok(packet)
     }
 
-    pub fn authenticate(
-        &mut self,
-        input_data: &mut Vec<u8>,
-        output_data: &mut Vec<u8>,
-    ) -> Result<bool> {
+    pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
         if self.is_server {
             match self.state {
                 0 => self.server_authenticate_0(input_data, output_data)?,
@@ -173,7 +169,7 @@ impl Srd {
     // Server initiate -> offer
     fn server_authenticate_0(
         &mut self,
-        input_data: &mut Vec<u8>,
+        input_data: &[u8],
         mut output_data: &mut Vec<u8>,
     ) -> Result<()> {
         // Negotiate
@@ -213,7 +209,7 @@ impl Srd {
     // Client offer -> accept
     fn client_authenticate_1(
         &mut self,
-        input_data: &mut Vec<u8>,
+        input_data: &[u8],
         mut output_data: &mut Vec<u8>,
     ) -> Result<()> {
         //Challenge
@@ -278,7 +274,7 @@ impl Srd {
     // Server accept -> confirm
     fn server_authenticate_1(
         &mut self,
-        input_data: &mut Vec<u8>,
+        input_data: &[u8],
         mut output_data: &mut Vec<u8>,
     ) -> Result<()> {
         // Response
@@ -348,7 +344,7 @@ impl Srd {
     // Client confirm -> delegate
     fn client_authenticate_2(
         &mut self,
-        input_data: &mut Vec<u8>,
+        input_data: &[u8],
         mut output_data: &mut Vec<u8>,
     ) -> Result<()> {
         // Confirm
@@ -406,7 +402,7 @@ impl Srd {
     }
 
     // Server delegate -> result
-    fn server_authenticate_2(&mut self, input_data: &mut Vec<u8>) -> Result<()> {
+    fn server_authenticate_2(&mut self, input_data: &[u8]) -> Result<()> {
         // Receive delegate and verify credentials...
         let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
         in_packet.verify_mac(&self.messages, &self.integrity_key)?;

@@ -7,4 +7,3 @@ pub trait SrdMessage {
         Self: Sized;
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
 }
-

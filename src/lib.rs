@@ -20,7 +20,7 @@ mod dh_params;
 
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use srd::Srd;
-pub use message_types::{SrdBlob, SrdMessage};
+pub use message_types::SrdBlob;
 pub use srd_errors::SrdError;
 
 #[cfg(test)]
