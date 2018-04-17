@@ -66,7 +66,10 @@ fn good_login() {
     client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
     server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
 
-    let srd_blob = SrdBlob::new("Basic", &vec![99, 10, 2, 4, 0, 0, 2, 3, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let srd_blob = SrdBlob::new(
+        "Basic",
+        &vec![99, 10, 2, 4, 0, 0, 2, 3, 2, 3, 4, 5, 6, 7, 8, 9],
+    );
     client.set_blob(srd_blob.clone());
 
     let mut client_status: bool = false;

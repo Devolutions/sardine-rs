@@ -337,8 +337,8 @@ impl Srd {
         // Delegate
         match self.blob {
             None => {
-                return Err(SrdError::InvalidKeySize);
-            } //TODO create error
+                return Err(SrdError::MissingBlob);
+            }
             Some(ref b) => {
                 message = SrdDelegate::new(b, &self.integrity_key, &self.delegation_key, &self.iv)?;
             }
@@ -354,7 +354,7 @@ impl Srd {
         let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
         in_packet.verify_mac(&self.integrity_key)?;
 
-        self.blob = Some(in_packet.get_data(&self.delegation_key, &self.iv[0..16],)?);
+        self.blob = Some(in_packet.get_data(&self.delegation_key, &self.iv[0..16])?);
 
         Ok(())
     }

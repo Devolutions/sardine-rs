@@ -18,13 +18,14 @@ pub enum SrdError {
     Crypto(SymmetricCipherError),
     Ffi(NulError),
     BadSequence,
-    MissingCallback,
+    MissingBlob,
     InvalidKeySize,
     InvalidMac,
     InvalidCbt,
     InvalidCert,
     InvalidCredentials,
     InvalidCstr,
+    InvalidDataLength,
 }
 
 impl fmt::Display for SrdError {
@@ -35,13 +36,14 @@ impl fmt::Display for SrdError {
             &SrdError::Crypto(ref _error) => write!(f, "Crypto error"),
             &SrdError::Ffi(ref _error) => write!(f, "FFI error"),
             &SrdError::BadSequence => write!(f, "Sequence error"),
-            &SrdError::MissingCallback => write!(f, "Callback error"),
+            &SrdError::MissingBlob => write!(f, "Blob error"),
             &SrdError::InvalidKeySize => write!(f, "Key Size error"),
             &SrdError::InvalidMac => write!(f, "MAC error"),
             &SrdError::InvalidCbt => write!(f, "CBT error"),
             &SrdError::InvalidCert => write!(f, "Certificate error"),
             &SrdError::InvalidCredentials => write!(f, "Credentials error"),
             &SrdError::InvalidCstr => write!(f, "String encoding error"),
+            &SrdError::InvalidDataLength => write!(f, "Data length error"),
         }
     }
 }
@@ -56,13 +58,16 @@ impl std::error::Error for SrdError {
                 "There was an error while manipulating null-terminated strings"
             }
             SrdError::BadSequence => "Unexpected packet received",
-            SrdError::MissingCallback => "No callback specified to verify credentials",
+            SrdError::MissingBlob => "No blob specified",
             SrdError::InvalidKeySize => "Key size must be 256, 512 or 1024",
             SrdError::InvalidMac => "Message authentication code is invalid",
             SrdError::InvalidCbt => "Channel binding token is invalid",
             SrdError::InvalidCert => "Certificate is invalid or absent",
             SrdError::InvalidCredentials => "Received credentials are invalid!",
             SrdError::InvalidCstr => "Username or password is not null-terminated",
+            SrdError::InvalidDataLength => {
+                "The length of the data to be encrypted or decrypted is invalid"
+            }
         }
     }
 }

@@ -135,4 +135,3 @@ fn confirm_encoding() {
 //        Err(_) => assert!(false),
 //    };
 //}
-

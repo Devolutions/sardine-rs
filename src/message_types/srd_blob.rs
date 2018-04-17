@@ -7,20 +7,19 @@ use Result;
 
 pub trait SrdBlobInterface {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdBlob {
     pub blob_type: String,
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
 }
 
 impl SrdBlob {
-    pub fn new(blob_type: &str, data: &[u8]) -> SrdBlob
-    {
+    pub fn new(blob_type: &str, data: &[u8]) -> SrdBlob {
         SrdBlob {
             blob_type: blob_type.to_string(),
             data: Vec::from(data),
@@ -30,8 +29,8 @@ impl SrdBlob {
 
 impl SrdBlobInterface for SrdBlob {
     fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         let type_size = buffer.read_u16::<LittleEndian>()?;
         let type_padding = buffer.read_u16::<LittleEndian>()?;
@@ -44,7 +43,7 @@ impl SrdBlobInterface for SrdBlob {
         buffer.read_u8()?; // null terminator
         let mut padding = vec![0u8; type_padding as usize];
         buffer.read_exact(&mut padding)?;
-        let blob_type:String = string.iter().map(|c| *c as char).collect();
+        let blob_type: String = string.iter().map(|c| *c as char).collect();
 
         let mut data = vec![0u8; data_size as usize];
         buffer.read_exact(&mut data)?;
@@ -55,10 +54,7 @@ impl SrdBlobInterface for SrdBlob {
         let mut padding = vec![0u8; 8];
         buffer.read_exact(&mut padding)?;
 
-        Ok(SrdBlob {
-            blob_type,
-            data,
-        })
+        Ok(SrdBlob { blob_type, data })
     }
 
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
@@ -90,7 +86,6 @@ impl SrdBlobInterface for SrdBlob {
         let padding = vec![0u8; 8];
         buffer.write_all(&padding)?;
 
-
         Ok(())
     }
 }
@@ -111,5 +106,5 @@ fn blob_encoding() {
             assert_eq!(blob, srd_blob);
         }
         Err(_) => assert!(false),
-    };}
-
+    };
+}

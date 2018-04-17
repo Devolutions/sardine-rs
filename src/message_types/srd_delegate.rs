@@ -8,9 +8,10 @@ use crypto::{aes, buffer, blockmodes::NoPadding};
 #[cfg(all(target_arch = "wasm32"))]
 use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
 
-use message_types::{SrdMac, SrdMessage, SrdBlob, SrdBlobInterface, srd_flags::SRD_FLAG_MAC,
+use message_types::{SrdBlob, SrdBlobInterface, SrdMac, SrdMessage, srd_flags::SRD_FLAG_MAC,
                     srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
 use Result;
+use srd_errors::SrdError;
 use crypto::buffer::WriteBuffer;
 use crypto::buffer::ReadBuffer;
 
@@ -86,7 +87,12 @@ impl SrdMac for SrdDelegate {
 }
 
 impl SrdDelegate {
-    pub fn new(srd_blob: &SrdBlob, integrity_key: &[u8], delegation_key: &[u8], iv: &[u8]) -> Result<Self> {
+    pub fn new(
+        srd_blob: &SrdBlob,
+        integrity_key: &[u8],
+        delegation_key: &[u8],
+        iv: &[u8],
+    ) -> Result<Self> {
         let mut v_blob = Vec::new();
         srd_blob.write_to(&mut v_blob)?;
         let encrypted_blob = encrypt_data(&v_blob, delegation_key, iv)?;
@@ -97,7 +103,7 @@ impl SrdDelegate {
             seq_num: 4,
             flags: SRD_FLAG_MAC,
             size: (encrypted_blob.len() as u32),
-            encrypted_blob: encrypted_blob,
+            encrypted_blob,
             mac: [0u8; 32],
         };
 
@@ -116,7 +122,9 @@ impl SrdDelegate {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn encrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    assert_eq!(data.len() % 16, 0);
+    if data.len() % 16 != 0 {
+        return Err(SrdError::InvalidDataLength);
+    }
     let mut enc_data = Vec::new();
     {
         let mut cipher = aes::cbc_encryptor(aes::KeySize::KeySize256, key, iv, NoPadding);
@@ -126,10 +134,12 @@ fn encrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
 
         loop {
             let result = cipher.encrypt(&mut read_buffer, &mut write_buffer, true)?;
-            enc_data.write_all( write_buffer.take_read_buffer().take_remaining()).unwrap();
+            enc_data
+                .write_all(write_buffer.take_read_buffer().take_remaining())
+                .unwrap();
             match result {
                 buffer::BufferResult::BufferUnderflow => break,
-                buffer::BufferResult::BufferOverflow => { }
+                buffer::BufferResult::BufferOverflow => {}
             }
         }
     }
@@ -167,6 +177,9 @@ fn encrypt_data(username: &[u8], password: &[u8], key: &[u8], iv: &[u8]) -> Resu
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn decrypt_data(enc_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+    if enc_data.len() % 16 != 0 {
+        return Err(SrdError::InvalidDataLength);
+    }
     let mut data = Vec::new();
     {
         let mut cipher = aes::cbc_decryptor(aes::KeySize::KeySize256, key, iv, NoPadding);
@@ -176,7 +189,8 @@ pub fn decrypt_data(enc_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
 
         loop {
             let result = cipher.decrypt(&mut read_buffer, &mut write_buffer, true)?;
-            data.write_all(write_buffer.take_read_buffer().take_remaining()).unwrap();
+            data.write_all(write_buffer.take_read_buffer().take_remaining())
+                .unwrap();
             match result {
                 buffer::BufferResult::BufferUnderflow => break,
                 buffer::BufferResult::BufferOverflow => {}

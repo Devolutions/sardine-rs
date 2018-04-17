@@ -7,7 +7,7 @@ mod srd_confirm;
 mod srd_delegate;
 mod srd_blob;
 
-pub const SRD_SIGNATURE: u32 = 00445253;
+pub const SRD_SIGNATURE: u32 = 0x00445253;
 
 pub mod srd_msg_id {
     pub const SRD_INITIATE_MSG_ID: u8 = 1;
