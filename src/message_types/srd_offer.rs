@@ -96,3 +96,30 @@ impl SrdOffer {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std;
+    use message_types::{SrdMessage, SrdOffer, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
+
+    #[test]
+    fn offer_encoding() {
+        let msg = SrdOffer::new(256, vec![0, 0], vec![0u8; 256], vec![0u8; 256], [0u8; 32]);
+        assert_eq!(msg.get_id(), SRD_OFFER_MSG_ID);
+
+        let mut buffer: Vec<u8> = Vec::new();
+        match msg.write_to(&mut buffer) {
+            Ok(_) => (),
+            Err(_) => assert!(false),
+        };
+
+        let mut cursor = std::io::Cursor::new(buffer);
+        match SrdOffer::read_from(&mut cursor) {
+            Ok(x) => {
+                assert_eq!(x.signature, SRD_SIGNATURE);
+                assert_eq!(x, msg);
+            }
+            Err(_) => assert!(false),
+        };
+    }
+}

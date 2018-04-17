@@ -73,7 +73,11 @@ impl SrdMessage for SrdConfirm {
 }
 
 impl SrdConfirm {
-    pub fn new(cbt_opt: Option<[u8; 32]>, previous_messages: &[Box<SrdMessage>], integrity_key: &[u8]) -> Result<Self> {
+    pub fn new(
+        cbt_opt: Option<[u8; 32]>,
+        previous_messages: &[Box<SrdMessage>],
+        integrity_key: &[u8],
+    ) -> Result<Self> {
         let mut cbt = [0u8; 32];
         let mut flags = SRD_FLAG_MAC;
 
@@ -99,5 +103,32 @@ impl SrdConfirm {
 
     pub fn has_cbt(&self) -> bool {
         self.flags & SRD_FLAG_CBT == SRD_FLAG_CBT
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std;
+    use message_types::{SrdConfirm, SrdMessage, srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
+
+    #[test]
+    fn confirm_encoding() {
+        let msg = SrdConfirm::new(Some([0u8; 32]), &Vec::new(), &[0u8; 32]).unwrap();
+        assert_eq!(msg.get_id(), SRD_CONFIRM_MSG_ID);
+
+        let mut buffer: Vec<u8> = Vec::new();
+        match msg.write_to(&mut buffer) {
+            Ok(_) => (),
+            Err(_) => assert!(false),
+        };
+
+        let mut cursor = std::io::Cursor::new(buffer);
+        match SrdConfirm::read_from(&mut cursor) {
+            Ok(x) => {
+                assert_eq!(x.signature, SRD_SIGNATURE);
+                assert_eq!(x, msg);
+            }
+            Err(_) => assert!(false),
+        };
     }
 }

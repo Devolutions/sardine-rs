@@ -56,3 +56,30 @@ impl SrdInitiate {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std;
+    use message_types::{SrdInitiate, SrdMessage, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE};
+
+    #[test]
+    fn initiate_encoding() {
+        let msg = SrdInitiate::new(2);
+        assert_eq!(msg.get_id(), SRD_INITIATE_MSG_ID);
+
+        let mut buffer: Vec<u8> = Vec::new();
+        match msg.write_to(&mut buffer) {
+            Ok(_) => (),
+            Err(_) => assert!(false),
+        };
+
+        let mut cursor = std::io::Cursor::new(buffer);
+        match SrdInitiate::read_from(&mut cursor) {
+            Ok(x) => {
+                assert_eq!(x.signature, SRD_SIGNATURE);
+                assert_eq!(x, msg);
+            }
+            Err(_) => assert!(false),
+        };
+    }
+}

@@ -254,3 +254,60 @@ fn xor_block(a: &[u8], b: &[u8]) -> [u8; 16] {
 
     result
 }
+
+//#[cfg(test)]
+//mod test {
+//    use std;
+//    use message_types::{SRD_SIGNATURE, SrdDelegate, SrdMessage, srd_msg_id::SRD_DELEGATE_MSG_ID};
+//
+//    #[test]
+//    fn delegate_encoding() {
+//        let blob = SrdLogonBlob {
+//            packet_type: 1,
+//            flags: 0,
+//            size: 256,
+//            data: [0u8; 256],
+//        };
+//
+//        let msg = SrdDelegate::new()
+//        {
+//            packet_type: 5,
+//            flags: 0,
+//            reserved: 0,
+//            blob,
+//            mac: [0u8; 32],
+//        };
+//
+//        assert_eq!(msg.blob.get_id(), SRD_LOGON_BLOB_ID);
+//        assert_eq!(msg.get_id(), SRD_DELEGATE_ID);
+//
+//        let mut buffer: Vec<u8> = Vec::new();
+//        match msg.write_to(&mut buffer) {
+//            Ok(_) => (),
+//            Err(_) => assert!(false),
+//        };
+//
+//        let mut expected = vec![5, 0, 0, 0, 0, 0, 0, 0];
+//        expected.append(&mut vec![1, 0, 0, 1]);
+//        expected.append(&mut vec![0u8; 256]);
+//        expected.append(&mut vec![0u8; 32]);
+//
+//        assert_eq!(buffer, expected);
+//        assert_eq!(buffer.len(), msg.get_size());
+//
+//        let mut cursor = std::io::Cursor::new(buffer);
+//
+//        match SrdDelegate::read_from(&mut cursor) {
+//            Ok(x) => {
+//                assert_eq!(x.packet_type, 5);
+//                assert_eq!(x.flags, 0);
+//                assert_eq!(x.reserved, 0);
+//                assert_eq!(x.blob.packet_type, 1);
+//                assert_eq!(x.blob.size, 256);
+//                assert_eq!(x.blob.data.to_vec(), vec![0u8; 256]);
+//                assert_eq!(x.mac, [0u8; 32]);
+//            }
+//            Err(_) => assert!(false),
+//        };
+//    }
+//}

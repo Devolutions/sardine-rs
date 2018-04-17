@@ -274,7 +274,7 @@ impl Srd {
 
         self.derive_keys();
 
-        in_packet.verify_mac(&self.messages,&self.integrity_key)?;
+        in_packet.verify_mac(&self.messages, &self.integrity_key)?;
 
         // Verify client cbt
         match self.cert_data {
@@ -319,7 +319,7 @@ impl Srd {
             }
         }
 
-        let out_packet = SrdConfirm::new(cbt, &self.messages,&self.integrity_key)?;
+        let out_packet = SrdConfirm::new(cbt, &self.messages, &self.integrity_key)?;
 
         self.write_msg(&out_packet, &mut output_data)?;
 
@@ -368,7 +368,13 @@ impl Srd {
                 return Err(SrdError::MissingBlob);
             }
             Some(ref b) => {
-                out_packet = SrdDelegate::new(b, &self.messages, &self.integrity_key, &self.delegation_key, &self.iv)?;
+                out_packet = SrdDelegate::new(
+                    b,
+                    &self.messages,
+                    &self.integrity_key,
+                    &self.delegation_key,
+                    &self.iv,
+                )?;
             }
         }
 
@@ -381,7 +387,7 @@ impl Srd {
     fn server_2(&mut self, input_data: &mut Vec<u8>) -> Result<()> {
         // Receive delegate and verify credentials...
         let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
-        in_packet.verify_mac(&self.messages,&self.integrity_key)?;
+        in_packet.verify_mac(&self.messages, &self.integrity_key)?;
 
         self.blob = Some(in_packet.get_data(&self.delegation_key, &self.iv[0..16])?);
 

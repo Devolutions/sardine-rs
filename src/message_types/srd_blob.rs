@@ -84,21 +84,27 @@ impl SrdBlobInterface for SrdBlob {
     }
 }
 
-#[test]
-fn blob_encoding() {
-    let srd_blob = SrdBlob::new("Basic", &vec![0, 1, 2, 3]);
+#[cfg(test)]
+mod test {
+    use std;
+    use message_types::{SrdBlob, SrdBlobInterface};
 
-    let mut buffer: Vec<u8> = Vec::new();
-    match srd_blob.write_to(&mut buffer) {
-        Ok(_) => (),
-        Err(_) => assert!(false),
-    };
+    #[test]
+    fn blob_encoding() {
+        let srd_blob = SrdBlob::new("Basic", &vec![0, 1, 2, 3]);
 
-    let mut cursor = std::io::Cursor::new(buffer);
-    match SrdBlob::read_from(&mut cursor) {
-        Ok(blob) => {
-            assert_eq!(blob, srd_blob);
-        }
-        Err(_) => assert!(false),
-    };
+        let mut buffer: Vec<u8> = Vec::new();
+        match srd_blob.write_to(&mut buffer) {
+            Ok(_) => (),
+            Err(_) => assert!(false),
+        };
+
+        let mut cursor = std::io::Cursor::new(buffer);
+        match SrdBlob::read_from(&mut cursor) {
+            Ok(blob) => {
+                assert_eq!(blob, srd_blob);
+            }
+            Err(_) => assert!(false),
+        };
+    }
 }
