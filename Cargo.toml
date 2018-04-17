@@ -22,5 +22,5 @@ aes-soft = "0.1"
 wasm-bindgen = "0.2.2"
 
 
-[target.'cfg(all(target_arch = "wasm32"))'.lib]
-crate-type = ["cdylib"]
+#[target.'cfg(all(target_arch = "wasm32"))'.lib]
+#crate-type = ["cdylib"]

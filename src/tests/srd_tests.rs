@@ -90,5 +90,5 @@ fn good_login() {
     assert!(client_status);
     assert!(server_status);
 
-    assert_eq!(server.blob().unwrap(), srd_blob);
+    assert_eq!(server.blob().clone().unwrap(), srd_blob);
 }

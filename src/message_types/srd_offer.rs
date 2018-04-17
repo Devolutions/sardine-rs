@@ -19,7 +19,7 @@ pub struct SrdOffer {
 }
 
 impl SrdMessage for SrdOffer {
-    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
+    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
     where
         Self: Sized,
     {
@@ -105,7 +105,9 @@ impl SrdOffer {
         }
     }
 
-    pub fn key_size(&self) -> u16 { self.key_size }
+    pub fn key_size(&self) -> u16 {
+        self.key_size
+    }
 }
 
 #[cfg(test)]
@@ -131,7 +133,7 @@ mod test {
             Err(_) => assert!(false),
         };
 
-        let mut cursor = std::io::Cursor::new(buffer);
+        let mut cursor = std::io::Cursor::new(buffer.as_slice());
         match SrdOffer::read_from(&mut cursor) {
             Ok(x) => {
                 assert_eq!(x.signature, SRD_SIGNATURE);

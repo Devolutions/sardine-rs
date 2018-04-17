@@ -22,7 +22,7 @@ pub struct SrdAccept {
 }
 
 impl SrdMessage for SrdAccept {
-    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
+    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
     where
         Self: Sized,
     {
@@ -167,7 +167,7 @@ mod test {
             Err(_) => assert!(false),
         };
 
-        let mut cursor = std::io::Cursor::new(buffer);
+        let mut cursor = std::io::Cursor::new(buffer.as_slice());
         match SrdAccept::read_from(&mut cursor) {
             Ok(x) => {
                 assert_eq!(x.signature, SRD_SIGNATURE);

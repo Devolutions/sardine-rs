@@ -7,7 +7,7 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
 pub trait SrdMessage {
-    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
+    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
     where
         Self: Sized;
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
