@@ -1,5 +1,4 @@
 mod srd_message;
-mod srd_mac;
 mod srd_initiate;
 mod srd_offer;
 mod srd_accept;
@@ -22,7 +21,6 @@ pub mod srd_flags {
     pub const SRD_FLAG_CBT: u16 = 0x0002;
 }
 
-pub use message_types::srd_mac::SrdMac;
 pub use message_types::srd_message::SrdMessage;
 pub use message_types::srd_initiate::SrdInitiate;
 pub use message_types::srd_offer::SrdOffer;

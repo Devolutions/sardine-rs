@@ -3,7 +3,7 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{SrdMac, SrdMessage, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
+use message_types::{SrdMessage, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
                     srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
 use Result;
 
@@ -52,9 +52,7 @@ impl SrdMessage for SrdConfirm {
     fn get_id(&self) -> u8 {
         SRD_CONFIRM_MSG_ID
     }
-}
 
-impl SrdMac for SrdConfirm {
     fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
         buffer.write_u32::<LittleEndian>(self.signature)?;
         buffer.write_u8(self.packet_type)?;
@@ -65,8 +63,8 @@ impl SrdMac for SrdConfirm {
         Ok(())
     }
 
-    fn get_mac(&self) -> &[u8] {
-        &self.mac
+    fn get_mac(&self) -> Option<&[u8]> {
+        Some(&self.mac)
     }
 
     fn set_mac(&mut self, mac: &[u8]) {

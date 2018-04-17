@@ -8,7 +8,7 @@ use crypto::{aes, buffer, blockmodes::NoPadding};
 #[cfg(all(target_arch = "wasm32"))]
 use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
 
-use message_types::{SrdBlob, SrdBlobInterface, SrdMac, SrdMessage, srd_flags::SRD_FLAG_MAC,
+use message_types::{SrdBlob, SrdBlobInterface, SrdMessage, srd_flags::SRD_FLAG_MAC,
                     srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
 use Result;
 use srd_errors::SrdError;
@@ -64,9 +64,7 @@ impl SrdMessage for SrdDelegate {
     fn get_id(&self) -> u8 {
         SRD_DELEGATE_MSG_ID
     }
-}
 
-impl SrdMac for SrdDelegate {
     fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
         buffer.write_u32::<LittleEndian>(self.signature)?;
         buffer.write_u8(self.packet_type)?;
@@ -77,8 +75,8 @@ impl SrdMac for SrdDelegate {
         Ok(())
     }
 
-    fn get_mac(&self) -> &[u8] {
-        &self.mac
+    fn get_mac(&self) -> Option<&[u8]> {
+        Some(&self.mac)
     }
 
     fn set_mac(&mut self, mac: &[u8]) {
