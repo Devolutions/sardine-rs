@@ -28,8 +28,8 @@ pub struct SrdDelegate {
 
 impl SrdMessage for SrdDelegate {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         let signature = buffer.read_u32::<LittleEndian>()?;
         let packet_type = buffer.read_u8()?;

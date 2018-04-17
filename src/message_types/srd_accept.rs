@@ -3,7 +3,7 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{expand_start, SrdPacket, SrdMessage, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
+use message_types::{expand_start, SrdMessage, SrdPacket, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
                     srd_msg_id::SRD_ACCEPT_MSG_ID, SRD_SIGNATURE};
 use Result;
 
@@ -23,8 +23,8 @@ pub struct SrdAccept {
 
 impl SrdMessage for SrdAccept {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         let signature = buffer.read_u32::<LittleEndian>()?;
         let packet_type = buffer.read_u8()?;
@@ -148,7 +148,8 @@ impl SrdAccept {
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdAccept, SrdMessage, SrdPacket, srd_msg_id::SRD_ACCEPT_MSG_ID, SRD_SIGNATURE};
+    use message_types::{SrdAccept, SrdMessage, SrdPacket, srd_msg_id::SRD_ACCEPT_MSG_ID,
+                        SRD_SIGNATURE};
 
     #[test]
     fn accept_encoding() {
