@@ -66,15 +66,15 @@ impl SrdMessage for SrdOffer {
         Ok(())
     }
 
-    fn get_id(&self) -> u8 {
+    fn id(&self) -> u8 {
         SRD_OFFER_MSG_ID
     }
 
-    fn get_signature(&self) -> u32 {
+    fn signature(&self) -> u32 {
         self.signature
     }
 
-    fn get_seq_num(&self) -> u8 {
+    fn seq_num(&self) -> u8 {
         self.seq_num
     }
 }
@@ -121,7 +121,7 @@ mod test {
             vec![0u8; 256],
             [0u8; 32],
         );
-        assert_eq!(msg.get_id(), SRD_OFFER_MSG_ID);
+        assert_eq!(msg.id(), SRD_OFFER_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();
         match msg.write_to(&mut buffer) {

@@ -64,15 +64,15 @@ impl SrdMessage for SrdAccept {
         Ok(())
     }
 
-    fn get_id(&self) -> u8 {
+    fn id(&self) -> u8 {
         SRD_ACCEPT_MSG_ID
     }
 
-    fn get_signature(&self) -> u32 {
+    fn signature(&self) -> u32 {
         self.signature
     }
 
-    fn get_seq_num(&self) -> u8 {
+    fn seq_num(&self) -> u8 {
         self.seq_num
     }
 
@@ -90,7 +90,7 @@ impl SrdMessage for SrdAccept {
         Ok(())
     }
 
-    fn get_mac(&self) -> Option<&[u8]> {
+    fn mac(&self) -> Option<&[u8]> {
         Some(&self.mac)
     }
 
@@ -159,7 +159,7 @@ mod test {
             &Vec::new(),
             &[0u8; 32],
         ).unwrap();
-        assert_eq!(msg.get_id(), SRD_ACCEPT_MSG_ID);
+        assert_eq!(msg.id(), SRD_ACCEPT_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();
         match msg.write_to(&mut buffer) {

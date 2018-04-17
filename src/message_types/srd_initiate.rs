@@ -6,12 +6,12 @@ use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdInitiate {
-    pub signature: u32,
-    pub packet_type: u8,
-    pub seq_num: u8,
-    pub flags: u16,
-    pub key_size: u16,
-    pub reserved: u16,
+    signature: u32,
+    packet_type: u8,
+    seq_num: u8,
+    flags: u16,
+    key_size: u16,
+    reserved: u16,
 }
 
 impl SrdMessage for SrdInitiate {
@@ -39,15 +39,15 @@ impl SrdMessage for SrdInitiate {
         Ok(())
     }
 
-    fn get_id(&self) -> u8 {
+    fn id(&self) -> u8 {
         SRD_INITIATE_MSG_ID
     }
 
-    fn get_signature(&self) -> u32 {
+    fn signature(&self) -> u32 {
         self.signature
     }
 
-    fn get_seq_num(&self) -> u8 {
+    fn seq_num(&self) -> u8 {
         self.seq_num
     }
 }
@@ -63,6 +63,8 @@ impl SrdInitiate {
             reserved: 0,
         }
     }
+
+    pub fn key_size(&self) -> u16 { self.key_size }
 }
 
 #[cfg(test)]
@@ -73,7 +75,7 @@ mod test {
     #[test]
     fn initiate_encoding() {
         let msg = SrdInitiate::new(0, 2);
-        assert_eq!(msg.get_id(), SRD_INITIATE_MSG_ID);
+        assert_eq!(msg.id(), SRD_INITIATE_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();
         match msg.write_to(&mut buffer) {

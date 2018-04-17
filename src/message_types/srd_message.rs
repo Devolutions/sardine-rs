@@ -11,15 +11,15 @@ pub trait SrdMessage {
     where
         Self: Sized;
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
-    fn get_id(&self) -> u8;
-    fn get_signature(&self) -> u32;
-    fn get_seq_num(&self) -> u8;
+    fn id(&self) -> u8;
+    fn signature(&self) -> u32;
+    fn seq_num(&self) -> u8;
 
     fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
         self.write_to(buffer)
     }
 
-    fn get_mac(&self) -> Option<&[u8]> {
+    fn mac(&self) -> Option<&[u8]> {
         None
     }
 
@@ -50,7 +50,7 @@ pub trait SrdMessage {
         previous_messages: &[Box<SrdMessage>],
         integrity_key: &[u8],
     ) -> Result<()> {
-        let message_mac = match self.get_mac() {
+        let message_mac = match self.mac() {
             None => {
                 return Ok(());
             }

@@ -61,15 +61,15 @@ impl SrdMessage for SrdDelegate {
         Ok(())
     }
 
-    fn get_id(&self) -> u8 {
+    fn id(&self) -> u8 {
         SRD_DELEGATE_MSG_ID
     }
 
-    fn get_signature(&self) -> u32 {
+    fn signature(&self) -> u32 {
         self.signature
     }
 
-    fn get_seq_num(&self) -> u8 {
+    fn seq_num(&self) -> u8 {
         self.seq_num
     }
 
@@ -83,7 +83,7 @@ impl SrdMessage for SrdDelegate {
         Ok(())
     }
 
-    fn get_mac(&self) -> Option<&[u8]> {
+    fn mac(&self) -> Option<&[u8]> {
         Some(&self.mac)
     }
 

@@ -95,11 +95,11 @@ impl Srd {
     }
 
     pub fn write_msg<T: SrdMessage>(&mut self, msg: &T, buffer: &mut Vec<u8>) -> Result<()> {
-        if msg.get_signature() != SRD_SIGNATURE {
+        if msg.signature() != SRD_SIGNATURE {
             return Err(SrdError::InvalidSignature);
         }
 
-        if msg.get_seq_num() != self.seq_num {
+        if msg.seq_num() != self.seq_num {
             return Err(SrdError::BadSequence);
         }
 
@@ -115,11 +115,11 @@ impl Srd {
         let mut reader = std::io::Cursor::new(buffer.clone());
         let packet = T::read_from(&mut reader)?;
 
-        if packet.get_signature() != SRD_SIGNATURE {
+        if packet.signature() != SRD_SIGNATURE {
             return Err(SrdError::InvalidSignature);
         }
 
-        if packet.get_seq_num() != self.seq_num {
+        if packet.seq_num() != self.seq_num {
             return Err(SrdError::BadSequence);
         }
 
@@ -174,10 +174,10 @@ impl Srd {
     fn server_0(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
         let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
-        self.set_key_size(in_packet.key_size)?;
+        self.set_key_size(in_packet.key_size())?;
         self.find_dh_parameters()?;
 
-        let key_size = in_packet.key_size;
+        let key_size = in_packet.key_size();
 
         self.messages.push(Box::new(in_packet));
 
