@@ -19,7 +19,8 @@ pub struct Srd {
 
     is_server: bool,
     key_size: u16,
-    seq_num: u16,
+    seq_num: u8,
+    state: u8,
 
     messages: Vec<Box<SrdMessage>>,
 
@@ -48,6 +49,7 @@ impl Srd {
             is_server,
             key_size: 256,
             seq_num: 0,
+            state: 0,
 
             messages: Vec::new(),
 
@@ -93,18 +95,17 @@ impl Srd {
     }
 
     pub fn write_msg<T: SrdMessage>(&mut self, msg: &T, buffer: &mut Vec<u8>) -> Result<()> {
-        let seq_num = if self.is_server {
-            (msg.get_id() - 1) / 2
-        } else {
-            msg.get_id() / 2
-        };
-
-        if seq_num as u16 == self.seq_num {
-            msg.write_to(buffer)?;
-            Ok(())
-        } else {
-            Err(SrdError::BadSequence)
+        if msg.get_signature() != SRD_SIGNATURE {
+            return Err(SrdError::InvalidSignature);
         }
+
+        if msg.get_seq_num() != self.seq_num {
+            return Err(SrdError::BadSequence);
+        }
+
+        msg.write_to(buffer)?;
+        self.seq_num += 1;
+        Ok(())
     }
 
     pub fn read_msg<T: SrdMessage>(&mut self, buffer: &mut Vec<u8>) -> Result<T>
@@ -114,17 +115,17 @@ impl Srd {
         let mut reader = std::io::Cursor::new(buffer.clone());
         let packet = T::read_from(&mut reader)?;
 
-        let seq_num = if self.is_server {
-            (packet.get_id() - 1) / 2
-        } else {
-            packet.get_id() / 2
-        };
-
-        if seq_num as u16 == self.seq_num {
-            Ok(packet)
-        } else {
-            Err(SrdError::BadSequence)
+        if packet.get_signature() != SRD_SIGNATURE {
+            return Err(SrdError::InvalidSignature);
         }
+
+        if packet.get_seq_num() != self.seq_num {
+            return Err(SrdError::BadSequence);
+        }
+
+        self.seq_num += 1;
+
+        Ok(packet)
     }
 
     pub fn authenticate(
@@ -133,34 +134,36 @@ impl Srd {
         output_data: &mut Vec<u8>,
     ) -> Result<bool> {
         if self.is_server {
-            match self.seq_num {
+            match self.state {
                 0 => self.server_0(input_data, output_data)?,
                 1 => self.server_1(input_data, output_data)?,
                 2 => {
                     self.server_2(input_data)?;
+                    self.state += 1;
                     return Ok(true);
                 }
                 _ => return Err(SrdError::BadSequence),
             }
         } else {
-            match self.seq_num {
+            match self.state {
                 0 => self.client_0(output_data)?,
                 1 => self.client_1(input_data, output_data)?,
                 2 => {
                     self.client_2(input_data, output_data)?;
+                    self.state += 1;
                     return Ok(true);
                 }
                 _ => return Err(SrdError::BadSequence),
             }
         }
-        self.seq_num += 1;
+        self.state += 1;
         Ok(false)
     }
 
     // Client initiate
     fn client_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
-        let out_packet = SrdInitiate::new(self.key_size);
+        let out_packet = SrdInitiate::new(self.seq_num, self.key_size);
         self.write_msg(&out_packet, &mut output_data)?;
 
         self.messages.push(Box::new(out_packet));
@@ -188,6 +191,7 @@ impl Srd {
         self.rng.fill_bytes(&mut self.server_nonce);
 
         let out_packet = SrdOffer::new(
+            self.seq_num,
             key_size,
             self.generator.to_bytes_be(),
             self.prime.to_bytes_be(),
@@ -247,6 +251,7 @@ impl Srd {
         }
 
         let out_packet = SrdAccept::new(
+            self.seq_num,
             key_size,
             public_key.to_bytes_be(),
             self.client_nonce,
@@ -319,7 +324,7 @@ impl Srd {
             }
         }
 
-        let out_packet = SrdConfirm::new(cbt, &self.messages, &self.integrity_key)?;
+        let out_packet = SrdConfirm::new(self.seq_num, cbt, &self.messages, &self.integrity_key)?;
 
         self.write_msg(&out_packet, &mut output_data)?;
 
@@ -369,6 +374,7 @@ impl Srd {
             }
             Some(ref b) => {
                 out_packet = SrdDelegate::new(
+                    self.seq_num,
                     b,
                     &self.messages,
                     &self.integrity_key,

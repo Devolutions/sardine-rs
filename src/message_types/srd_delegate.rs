@@ -65,6 +65,14 @@ impl SrdMessage for SrdDelegate {
         SRD_DELEGATE_MSG_ID
     }
 
+    fn get_signature(&self) -> u32 {
+        self.signature
+    }
+
+    fn get_seq_num(&self) -> u8 {
+        self.seq_num
+    }
+
     fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
         buffer.write_u32::<LittleEndian>(self.signature)?;
         buffer.write_u8(self.packet_type)?;
@@ -86,6 +94,7 @@ impl SrdMessage for SrdDelegate {
 
 impl SrdDelegate {
     pub fn new(
+        seq_num: u8,
         srd_blob: &SrdBlob,
         previous_messages: &[Box<SrdMessage>],
         integrity_key: &[u8],
@@ -99,7 +108,7 @@ impl SrdDelegate {
         let mut response = SrdDelegate {
             signature: SRD_SIGNATURE,
             packet_type: SRD_DELEGATE_MSG_ID,
-            seq_num: 4,
+            seq_num,
             flags: SRD_FLAG_MAC,
             size: (encrypted_blob.len() as u32),
             encrypted_blob,

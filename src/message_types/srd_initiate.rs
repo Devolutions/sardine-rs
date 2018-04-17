@@ -42,14 +42,22 @@ impl SrdMessage for SrdInitiate {
     fn get_id(&self) -> u8 {
         SRD_INITIATE_MSG_ID
     }
+
+    fn get_signature(&self) -> u32 {
+        self.signature
+    }
+
+    fn get_seq_num(&self) -> u8 {
+        self.seq_num
+    }
 }
 
 impl SrdInitiate {
-    pub fn new(key_size: u16) -> SrdInitiate {
+    pub fn new(seq_num: u8, key_size: u16) -> SrdInitiate {
         SrdInitiate {
             signature: SRD_SIGNATURE,
             packet_type: SRD_INITIATE_MSG_ID,
-            seq_num: 0,
+            seq_num,
             flags: 0,
             key_size,
             reserved: 0,
@@ -64,7 +72,7 @@ mod test {
 
     #[test]
     fn initiate_encoding() {
-        let msg = SrdInitiate::new(2);
+        let msg = SrdInitiate::new(0, 2);
         assert_eq!(msg.get_id(), SRD_INITIATE_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();

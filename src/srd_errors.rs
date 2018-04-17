@@ -26,6 +26,7 @@ pub enum SrdError {
     InvalidCredentials,
     InvalidCstr,
     InvalidDataLength,
+    InvalidSignature,
 }
 
 impl fmt::Display for SrdError {
@@ -44,6 +45,7 @@ impl fmt::Display for SrdError {
             &SrdError::InvalidCredentials => write!(f, "Credentials error"),
             &SrdError::InvalidCstr => write!(f, "String encoding error"),
             &SrdError::InvalidDataLength => write!(f, "Data length error"),
+            &SrdError::InvalidSignature => write!(f, "Signature error"),
         }
     }
 }
@@ -68,6 +70,7 @@ impl std::error::Error for SrdError {
             SrdError::InvalidDataLength => {
                 "The length of the data to be encrypted or decrypted is invalid"
             }
+            SrdError::InvalidSignature => "Packet signature is invalid",
         }
     }
 }

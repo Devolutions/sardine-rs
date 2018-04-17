@@ -69,10 +69,19 @@ impl SrdMessage for SrdOffer {
     fn get_id(&self) -> u8 {
         SRD_OFFER_MSG_ID
     }
+
+    fn get_signature(&self) -> u32 {
+        self.signature
+    }
+
+    fn get_seq_num(&self) -> u8 {
+        self.seq_num
+    }
 }
 
 impl SrdOffer {
     pub fn new(
+        seq_num: u8,
         key_size: u16,
         mut generator: Vec<u8>,
         mut prime: Vec<u8>,
@@ -86,7 +95,7 @@ impl SrdOffer {
         SrdOffer {
             signature: SRD_SIGNATURE,
             packet_type: SRD_OFFER_MSG_ID,
-            seq_num: 1,
+            seq_num,
             flags: 0,
             key_size,
             generator,
@@ -104,7 +113,14 @@ mod test {
 
     #[test]
     fn offer_encoding() {
-        let msg = SrdOffer::new(256, vec![0, 0], vec![0u8; 256], vec![0u8; 256], [0u8; 32]);
+        let msg = SrdOffer::new(
+            1,
+            256,
+            vec![0, 0],
+            vec![0u8; 256],
+            vec![0u8; 256],
+            [0u8; 32],
+        );
         assert_eq!(msg.get_id(), SRD_OFFER_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();

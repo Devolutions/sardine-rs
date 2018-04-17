@@ -12,6 +12,8 @@ pub trait SrdMessage {
         Self: Sized;
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
     fn get_id(&self) -> u8;
+    fn get_signature(&self) -> u32;
+    fn get_seq_num(&self) -> u8;
 
     fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
         self.write_to(buffer)

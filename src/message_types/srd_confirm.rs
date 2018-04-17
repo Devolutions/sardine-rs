@@ -53,6 +53,14 @@ impl SrdMessage for SrdConfirm {
         SRD_CONFIRM_MSG_ID
     }
 
+    fn get_signature(&self) -> u32 {
+        self.signature
+    }
+
+    fn get_seq_num(&self) -> u8 {
+        self.seq_num
+    }
+
     fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
         buffer.write_u32::<LittleEndian>(self.signature)?;
         buffer.write_u8(self.packet_type)?;
@@ -74,6 +82,7 @@ impl SrdMessage for SrdConfirm {
 
 impl SrdConfirm {
     pub fn new(
+        seq_num: u8,
         cbt_opt: Option<[u8; 32]>,
         previous_messages: &[Box<SrdMessage>],
         integrity_key: &[u8],
@@ -91,7 +100,7 @@ impl SrdConfirm {
         let mut response = SrdConfirm {
             signature: SRD_SIGNATURE,
             packet_type: SRD_CONFIRM_MSG_ID,
-            seq_num: 3,
+            seq_num,
             flags,
             cbt,
             mac: [0u8; 32],
@@ -113,7 +122,7 @@ mod test {
 
     #[test]
     fn confirm_encoding() {
-        let msg = SrdConfirm::new(Some([0u8; 32]), &Vec::new(), &[0u8; 32]).unwrap();
+        let msg = SrdConfirm::new(3, Some([0u8; 32]), &Vec::new(), &[0u8; 32]).unwrap();
         assert_eq!(msg.get_id(), SRD_CONFIRM_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();

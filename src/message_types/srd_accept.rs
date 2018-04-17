@@ -68,6 +68,14 @@ impl SrdMessage for SrdAccept {
         SRD_ACCEPT_MSG_ID
     }
 
+    fn get_signature(&self) -> u32 {
+        self.signature
+    }
+
+    fn get_seq_num(&self) -> u8 {
+        self.seq_num
+    }
+
     fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
         buffer.write_u32::<LittleEndian>(self.signature)?;
         buffer.write_u8(self.packet_type)?;
@@ -93,6 +101,7 @@ impl SrdMessage for SrdAccept {
 
 impl SrdAccept {
     pub fn new(
+        seq_num: u8,
         key_size: u16,
         mut public_key: Vec<u8>,
         nonce: [u8; 32],
@@ -115,7 +124,7 @@ impl SrdAccept {
         let mut response = SrdAccept {
             signature: SRD_SIGNATURE,
             packet_type: SRD_ACCEPT_MSG_ID,
-            seq_num: 2,
+            seq_num,
             flags,
             reserved: 0,
             key_size,
@@ -142,6 +151,7 @@ mod test {
     #[test]
     fn accept_encoding() {
         let msg = SrdAccept::new(
+            2,
             256,
             vec![0u8; 256],
             [0u8; 32],
