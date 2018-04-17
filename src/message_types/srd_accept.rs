@@ -7,6 +7,7 @@ use message_types::{expand_start, SrdMac, SrdMessage, srd_flags::{SRD_FLAG_CBT, 
                     srd_msg_id::SRD_ACCEPT_MSG_ID, SRD_SIGNATURE};
 use Result;
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdAccept {
     pub signature: u32,
     pub packet_type: u8,
@@ -130,6 +131,6 @@ impl SrdAccept {
     }
 
     pub fn has_cbt(&self) -> bool {
-        self.flags & 0x02 == 0x02
+        self.flags & SRD_FLAG_CBT != 0
     }
 }

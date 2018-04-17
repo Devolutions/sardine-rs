@@ -15,7 +15,7 @@ use message_types::*;
 use dh_params::SRD_DH_PARAMS;
 
 pub struct Srd {
-    blob: Option<Vec<u8>>,
+    blob: Option<SrdBlob>,
 
     is_server: bool,
     key_size: u16,
@@ -27,7 +27,7 @@ pub struct Srd {
     server_nonce: [u8; 32],
     delegation_key: [u8; 32],
     integrity_key: [u8; 32],
-    iv: [u8; 32],
+    iv: [u8; 16],
 
     generator: BigUint,
 
@@ -53,7 +53,7 @@ impl Srd {
             server_nonce: [0; 32],
             delegation_key: [0; 32],
             integrity_key: [0; 32],
-            iv: [0; 32],
+            iv: [0; 16],
 
             generator: BigUint::from_bytes_be(&[0]),
 
@@ -65,11 +65,11 @@ impl Srd {
         })
     }
 
-    pub fn get_blob(&self) -> Option<Vec<u8>> {
+    pub fn get_blob(&self) -> Option<SrdBlob> {
         self.blob.clone()
     }
 
-    pub fn set_blob(&mut self, blob: Vec<u8>) {
+    pub fn set_blob(&mut self, blob: SrdBlob) {
         self.blob = Some(blob)
     }
 
@@ -153,7 +153,7 @@ impl Srd {
         Ok(false)
     }
 
-    // Client negotiate
+    // Client initiate
     fn client_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
         let msg = SrdInitiate::new(self.key_size);
@@ -161,7 +161,7 @@ impl Srd {
         Ok(())
     }
 
-    // Server negotiate -> challenge
+    // Server initiate -> offer
     fn server_0(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
         let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
@@ -184,11 +184,12 @@ impl Srd {
             public_key.to_bytes_be(),
             self.server_nonce,
         );
+
         self.write_msg(&out_packet, &mut output_data)?;
         Ok(())
     }
 
-    // Client challenge -> reponse
+    // Client offer -> accept
     fn client_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         //Challenge
         let in_packet = self.read_msg::<SrdOffer>(input_data)?;
@@ -240,7 +241,7 @@ impl Srd {
         Ok(())
     }
 
-    // Server response -> confirm
+    // Server accept -> confirm
     fn server_1(&mut self, input_data: &mut Vec<u8>, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Response
         let in_packet = self.read_msg::<SrdAccept>(input_data)?;
@@ -296,6 +297,7 @@ impl Srd {
         }
 
         let out_packet = SrdConfirm::new(cbt, &self.integrity_key)?;
+
         self.write_msg(&out_packet, &mut output_data)?;
         Ok(())
     }
@@ -331,7 +333,7 @@ impl Srd {
             }
         }
 
-        let message;
+        let message: SrdDelegate;
         // Delegate
         match self.blob {
             None => {
@@ -341,6 +343,7 @@ impl Srd {
                 message = SrdDelegate::new(b, &self.integrity_key, &self.delegation_key, &self.iv)?;
             }
         }
+
         self.write_msg(&message, &mut output_data)?;
         Ok(())
     }
@@ -351,7 +354,7 @@ impl Srd {
         let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
         in_packet.verify_mac(&self.integrity_key)?;
 
-        self.blob = Some(in_packet.get_data(&self.iv[0..16], &self.delegation_key)?);
+        self.blob = Some(in_packet.get_data(&self.delegation_key, &self.iv[0..16],)?);
 
         Ok(())
     }

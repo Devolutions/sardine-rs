@@ -5,6 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use message_types::{expand_start, SrdMessage, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
 use Result;
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdOffer {
     pub signature: u32,
     pub packet_type: u8,

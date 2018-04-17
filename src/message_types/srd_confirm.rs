@@ -7,6 +7,7 @@ use message_types::{SrdMac, SrdMessage, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
                     srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
 use Result;
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdConfirm {
     pub signature: u32,
     pub packet_type: u8,

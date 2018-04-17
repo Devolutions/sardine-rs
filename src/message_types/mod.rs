@@ -5,6 +5,7 @@ mod srd_offer;
 mod srd_accept;
 mod srd_confirm;
 mod srd_delegate;
+mod srd_blob;
 
 pub const SRD_SIGNATURE: u32 = 00445253;
 
@@ -28,6 +29,8 @@ pub use message_types::srd_offer::SrdOffer;
 pub use message_types::srd_accept::SrdAccept;
 pub use message_types::srd_confirm::SrdConfirm;
 pub use message_types::srd_delegate::SrdDelegate;
+pub use message_types::srd_blob::SrdBlob;
+pub use message_types::srd_blob::SrdBlobInterface;
 
 fn expand_start<T: Default>(buffer: &mut Vec<T>, new_size: usize) {
     if new_size > buffer.len() {

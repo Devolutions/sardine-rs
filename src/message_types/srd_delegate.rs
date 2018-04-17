@@ -8,17 +8,20 @@ use crypto::{aes, buffer, blockmodes::NoPadding};
 #[cfg(all(target_arch = "wasm32"))]
 use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
 
-use message_types::{SrdMac, SrdMessage, srd_flags::SRD_FLAG_MAC, srd_msg_id::SRD_DELEGATE_MSG_ID,
-                    SRD_SIGNATURE};
+use message_types::{SrdMac, SrdMessage, SrdBlob, SrdBlobInterface, srd_flags::SRD_FLAG_MAC,
+                    srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
 use Result;
+use crypto::buffer::WriteBuffer;
+use crypto::buffer::ReadBuffer;
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdDelegate {
     pub signature: u32,
     pub packet_type: u8,
     pub seq_num: u8,
     pub flags: u16,
     pub size: u32,
-    pub blob: Vec<u8>,
+    pub encrypted_blob: Vec<u8>,
     pub mac: [u8; 32],
 }
 
@@ -46,7 +49,7 @@ impl SrdMessage for SrdDelegate {
             seq_num,
             flags,
             size,
-            blob,
+            encrypted_blob: blob,
             mac,
         })
     }
@@ -69,7 +72,7 @@ impl SrdMac for SrdDelegate {
         buffer.write_u8(self.seq_num)?;
         buffer.write_u16::<LittleEndian>(self.flags)?;
         buffer.write_u32::<LittleEndian>(self.size)?;
-        buffer.write_all(&self.blob)?;
+        buffer.write_all(&self.encrypted_blob)?;
         Ok(())
     }
 
@@ -83,15 +86,18 @@ impl SrdMac for SrdDelegate {
 }
 
 impl SrdDelegate {
-    pub fn new(b: &[u8], integrity_key: &[u8], delegation_key: &[u8], iv: &[u8]) -> Result<Self> {
-        let blob = encrypt_data(b, delegation_key, iv)?;
+    pub fn new(srd_blob: &SrdBlob, integrity_key: &[u8], delegation_key: &[u8], iv: &[u8]) -> Result<Self> {
+        let mut v_blob = Vec::new();
+        srd_blob.write_to(&mut v_blob)?;
+        let encrypted_blob = encrypt_data(&v_blob, delegation_key, iv)?;
+
         let mut response = SrdDelegate {
             signature: SRD_SIGNATURE,
             packet_type: SRD_DELEGATE_MSG_ID,
             seq_num: 4,
             flags: SRD_FLAG_MAC,
-            size: (blob.len() as u32),
-            blob,
+            size: (encrypted_blob.len() as u32),
+            encrypted_blob: encrypted_blob,
             mac: [0u8; 32],
         };
 
@@ -99,21 +105,35 @@ impl SrdDelegate {
         Ok(response)
     }
 
-    pub fn get_data(&self, key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-        Ok(decrypt_data(&self.blob, key, iv)?)
+    pub fn get_data(&self, key: &[u8], iv: &[u8]) -> Result<SrdBlob> {
+        let buffer = decrypt_data(&self.encrypted_blob, key, iv)?;
+
+        let mut cursor = std::io::Cursor::new(buffer);
+        let srd_blob = SrdBlob::read_from(&mut cursor)?;
+        Ok(srd_blob)
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn encrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+    assert_eq!(data.len() % 16, 0);
     let mut enc_data = Vec::new();
     {
         let mut cipher = aes::cbc_encryptor(aes::KeySize::KeySize256, key, iv, NoPadding);
+        let mut buffer = [0u8; 1024];
         let mut read_buffer = buffer::RefReadBuffer::new(data);
-        let mut write_buffer = buffer::RefWriteBuffer::new(&mut enc_data);
+        let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
 
-        cipher.encrypt(&mut read_buffer, &mut write_buffer, false)?;
+        loop {
+            let result = cipher.encrypt(&mut read_buffer, &mut write_buffer, true)?;
+            enc_data.write_all( write_buffer.take_read_buffer().take_remaining()).unwrap();
+            match result {
+                buffer::BufferResult::BufferUnderflow => break,
+                buffer::BufferResult::BufferOverflow => { }
+            }
+        }
     }
+
     Ok(enc_data)
 }
 
@@ -150,11 +170,22 @@ pub fn decrypt_data(enc_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     let mut data = Vec::new();
     {
         let mut cipher = aes::cbc_decryptor(aes::KeySize::KeySize256, key, iv, NoPadding);
+        let mut buffer = [0; 1024];
         let mut read_buffer = buffer::RefReadBuffer::new(enc_data);
-        let mut write_buffer = buffer::RefWriteBuffer::new(&mut data);
+        let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
+
+        loop {
+            let result = cipher.decrypt(&mut read_buffer, &mut write_buffer, true)?;
+            data.write_all(write_buffer.take_read_buffer().take_remaining()).unwrap();
+            match result {
+                buffer::BufferResult::BufferUnderflow => break,
+                buffer::BufferResult::BufferOverflow => {}
+            }
+        }
 
         cipher.decrypt(&mut read_buffer, &mut write_buffer, true)?;
     }
+
     Ok(data)
 }
 
