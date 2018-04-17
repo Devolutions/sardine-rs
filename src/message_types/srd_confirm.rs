@@ -73,7 +73,7 @@ impl SrdMessage for SrdConfirm {
 }
 
 impl SrdConfirm {
-    pub fn new(cbt_opt: Option<[u8; 32]>, integrity_key: &[u8]) -> Result<Self> {
+    pub fn new(cbt_opt: Option<[u8; 32]>, previous_messages: &[Box<SrdMessage>], integrity_key: &[u8]) -> Result<Self> {
         let mut cbt = [0u8; 32];
         let mut flags = SRD_FLAG_MAC;
 
@@ -93,7 +93,7 @@ impl SrdConfirm {
             mac: [0u8; 32],
         };
 
-        response.compute_mac(&integrity_key)?;
+        response.compute_mac(&previous_messages, &integrity_key)?;
         Ok(response)
     }
 

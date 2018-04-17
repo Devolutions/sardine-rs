@@ -21,6 +21,8 @@ pub struct Srd {
     key_size: u16,
     seq_num: u16,
 
+    messages: Vec<Box<SrdMessage>>,
+
     cert_data: Option<Vec<u8>>,
 
     client_nonce: [u8; 32],
@@ -46,6 +48,8 @@ impl Srd {
             is_server,
             key_size: 256,
             seq_num: 0,
+
+            messages: Vec::new(),
 
             cert_data: None,
 
@@ -88,7 +92,7 @@ impl Srd {
         }
     }
 
-    pub fn write_msg(&mut self, msg: &SrdMessage, buffer: &mut Vec<u8>) -> Result<()> {
+    pub fn write_msg<T: SrdMessage>(&mut self, msg: &T, buffer: &mut Vec<u8>) -> Result<()> {
         let seq_num = if self.is_server {
             (msg.get_id() - 1) / 2
         } else {
@@ -156,8 +160,10 @@ impl Srd {
     // Client initiate
     fn client_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
-        let msg = SrdInitiate::new(self.key_size);
-        self.write_msg(&msg, &mut output_data)?;
+        let out_packet = SrdInitiate::new(self.key_size);
+        self.write_msg(&out_packet, &mut output_data)?;
+
+        self.messages.push(Box::new(out_packet));
         Ok(())
     }
 
@@ -167,6 +173,10 @@ impl Srd {
         let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
         self.set_key_size(in_packet.key_size)?;
         self.find_dh_parameters()?;
+
+        let key_size = in_packet.key_size;
+
+        self.messages.push(Box::new(in_packet));
 
         // Challenge
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
@@ -178,7 +188,7 @@ impl Srd {
         self.rng.fill_bytes(&mut self.server_nonce);
 
         let out_packet = SrdOffer::new(
-            in_packet.key_size,
+            key_size,
             self.generator.to_bytes_be(),
             self.prime.to_bytes_be(),
             public_key.to_bytes_be(),
@@ -186,6 +196,9 @@ impl Srd {
         );
 
         self.write_msg(&out_packet, &mut output_data)?;
+
+        self.messages.push(Box::new(out_packet));
+
         Ok(())
     }
 
@@ -212,6 +225,10 @@ impl Srd {
 
         self.derive_keys();
 
+        let key_size = in_packet.key_size;
+
+        self.messages.push(Box::new(in_packet));
+
         // Generate cbt
         let cbt;
 
@@ -230,14 +247,18 @@ impl Srd {
         }
 
         let out_packet = SrdAccept::new(
-            in_packet.key_size,
+            key_size,
             public_key.to_bytes_be(),
             self.client_nonce,
             cbt,
+            &self.messages,
             &self.integrity_key,
         )?;
 
         self.write_msg(&out_packet, &mut output_data)?;
+
+        self.messages.push(Box::new(out_packet));
+
         Ok(())
     }
 
@@ -253,7 +274,7 @@ impl Srd {
 
         self.derive_keys();
 
-        in_packet.verify_mac(&self.integrity_key)?;
+        in_packet.verify_mac(&self.messages,&self.integrity_key)?;
 
         // Verify client cbt
         match self.cert_data {
@@ -279,6 +300,8 @@ impl Srd {
             }
         }
 
+        self.messages.push(Box::new(in_packet));
+
         // Confirm
         // Generate server cbt
         let cbt;
@@ -296,9 +319,12 @@ impl Srd {
             }
         }
 
-        let out_packet = SrdConfirm::new(cbt, &self.integrity_key)?;
+        let out_packet = SrdConfirm::new(cbt, &self.messages,&self.integrity_key)?;
 
         self.write_msg(&out_packet, &mut output_data)?;
+
+        self.messages.push(Box::new(out_packet));
+
         Ok(())
     }
 
@@ -307,7 +333,7 @@ impl Srd {
         // Confirm
         let in_packet = self.read_msg::<SrdConfirm>(input_data)?;
 
-        in_packet.verify_mac(&self.integrity_key)?;
+        in_packet.verify_mac(&self.messages, &self.integrity_key)?;
 
         // Verify Server cbt
         match self.cert_data {
@@ -333,18 +359,21 @@ impl Srd {
             }
         }
 
-        let message: SrdDelegate;
+        self.messages.push(Box::new(in_packet));
+
+        let out_packet: SrdDelegate;
         // Delegate
         match self.blob {
             None => {
                 return Err(SrdError::MissingBlob);
             }
             Some(ref b) => {
-                message = SrdDelegate::new(b, &self.integrity_key, &self.delegation_key, &self.iv)?;
+                out_packet = SrdDelegate::new(b, &self.messages, &self.integrity_key, &self.delegation_key, &self.iv)?;
             }
         }
 
-        self.write_msg(&message, &mut output_data)?;
+        self.write_msg(&out_packet, &mut output_data)?;
+        self.messages.push(Box::new(out_packet));
         Ok(())
     }
 
@@ -352,9 +381,11 @@ impl Srd {
     fn server_2(&mut self, input_data: &mut Vec<u8>) -> Result<()> {
         // Receive delegate and verify credentials...
         let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
-        in_packet.verify_mac(&self.integrity_key)?;
+        in_packet.verify_mac(&self.messages,&self.integrity_key)?;
 
         self.blob = Some(in_packet.get_data(&self.delegation_key, &self.iv[0..16])?);
+
+        self.messages.push(Box::new(in_packet));
 
         Ok(())
     }

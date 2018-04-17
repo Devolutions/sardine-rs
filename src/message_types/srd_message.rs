@@ -23,10 +23,18 @@ pub trait SrdMessage {
 
     fn set_mac(&mut self, _mac: &[u8]) {}
 
-    fn compute_mac(&mut self, integrity_key: &[u8]) -> Result<()> {
+    fn compute_mac(
+        &mut self,
+        previous_messages: &[Box<SrdMessage>],
+        integrity_key: &[u8],
+    ) -> Result<()> {
         let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
 
         let mut buffer = Vec::new();
+        for m in previous_messages {
+            m.write_inner_buffer(&mut buffer)?;
+        }
+
         self.write_inner_buffer(&mut buffer)?;
 
         hmac.input(&buffer);
@@ -35,7 +43,11 @@ pub trait SrdMessage {
         Ok(())
     }
 
-    fn verify_mac(&self, integrity_key: &[u8]) -> Result<()> {
+    fn verify_mac(
+        &self,
+        previous_messages: &[Box<SrdMessage>],
+        integrity_key: &[u8],
+    ) -> Result<()> {
         let message_mac = match self.get_mac() {
             None => {
                 return Ok(());
@@ -46,6 +58,10 @@ pub trait SrdMessage {
         let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
 
         let mut buffer = Vec::new();
+        for m in previous_messages {
+            m.write_inner_buffer(&mut buffer)?;
+        }
+
         self.write_inner_buffer(&mut buffer)?;
 
         hmac.input(&buffer);

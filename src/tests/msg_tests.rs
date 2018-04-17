@@ -46,7 +46,7 @@ fn offer_encoding() {
 
 #[test]
 fn accept_encoding() {
-    let msg = SrdAccept::new(256, vec![0u8; 256], [0u8; 32], Some([0u8; 32]), &[0u8; 32]).unwrap();
+    let msg = SrdAccept::new(256, vec![0u8; 256], [0u8; 32], Some([0u8; 32]), &Vec::new(),&[0u8; 32]).unwrap();
     assert_eq!(msg.get_id(), SRD_ACCEPT_MSG_ID);
 
     let mut buffer: Vec<u8> = Vec::new();
@@ -67,7 +67,7 @@ fn accept_encoding() {
 
 #[test]
 fn confirm_encoding() {
-    let msg = SrdConfirm::new(Some([0u8; 32]), &[0u8; 32]).unwrap();
+    let msg = SrdConfirm::new(Some([0u8; 32]), &Vec::new(),&[0u8; 32]).unwrap();
     assert_eq!(msg.get_id(), SRD_CONFIRM_MSG_ID);
 
     let mut buffer: Vec<u8> = Vec::new();

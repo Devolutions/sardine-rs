@@ -97,6 +97,7 @@ impl SrdAccept {
         mut public_key: Vec<u8>,
         nonce: [u8; 32],
         cbt_opt: Option<[u8; 32]>,
+        previous_messages: &[Box<SrdMessage>],
         integrity_key: &[u8],
     ) -> Result<Self> {
         expand_start(&mut public_key, key_size as usize);
@@ -124,7 +125,7 @@ impl SrdAccept {
             mac: [0u8; 32],
         };
 
-        response.compute_mac(&integrity_key)?;
+        response.compute_mac(&previous_messages, &integrity_key)?;
         Ok(response)
     }
 

@@ -87,6 +87,7 @@ impl SrdMessage for SrdDelegate {
 impl SrdDelegate {
     pub fn new(
         srd_blob: &SrdBlob,
+        previous_messages: &[Box<SrdMessage>],
         integrity_key: &[u8],
         delegation_key: &[u8],
         iv: &[u8],
@@ -105,7 +106,7 @@ impl SrdDelegate {
             mac: [0u8; 32],
         };
 
-        response.compute_mac(&integrity_key)?;
+        response.compute_mac(&previous_messages, &integrity_key)?;
         Ok(response)
     }
 
