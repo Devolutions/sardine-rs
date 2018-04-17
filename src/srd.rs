@@ -71,7 +71,7 @@ impl Srd {
         })
     }
 
-    pub fn get_blob(&self) -> Option<SrdBlob> {
+    pub fn blob(&self) -> Option<SrdBlob> {
         self.blob.clone()
     }
 
@@ -94,7 +94,7 @@ impl Srd {
         }
     }
 
-    pub fn write_msg<T: SrdMessage>(&mut self, msg: &T, buffer: &mut Vec<u8>) -> Result<()> {
+    fn write_msg<T: SrdMessage>(&mut self, msg: &T, buffer: &mut Vec<u8>) -> Result<()> {
         if msg.signature() != SRD_SIGNATURE {
             return Err(SrdError::InvalidSignature);
         }
@@ -108,7 +108,7 @@ impl Srd {
         Ok(())
     }
 
-    pub fn read_msg<T: SrdMessage>(&mut self, buffer: &mut Vec<u8>) -> Result<T>
+    fn read_msg<T: SrdMessage>(&mut self, buffer: &mut Vec<u8>) -> Result<T>
     where
         T: SrdMessage,
     {
@@ -229,7 +229,7 @@ impl Srd {
 
         self.derive_keys();
 
-        let key_size = in_packet.key_size;
+        let key_size = in_packet.key_size();
 
         self.messages.push(Box::new(in_packet));
 

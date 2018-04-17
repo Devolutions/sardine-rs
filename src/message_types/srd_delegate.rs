@@ -17,13 +17,13 @@ use crypto::buffer::ReadBuffer;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdDelegate {
-    pub signature: u32,
-    pub packet_type: u8,
-    pub seq_num: u8,
-    pub flags: u16,
+    signature: u32,
+    packet_type: u8,
+    seq_num: u8,
+    flags: u16,
     pub size: u32,
     pub encrypted_blob: Vec<u8>,
-    pub mac: [u8; 32],
+    mac: [u8; 32],
 }
 
 impl SrdMessage for SrdDelegate {

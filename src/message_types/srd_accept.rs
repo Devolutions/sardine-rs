@@ -9,16 +9,16 @@ use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdAccept {
-    pub signature: u32,
-    pub packet_type: u8,
-    pub seq_num: u8,
-    pub flags: u16,
-    pub key_size: u16,
-    pub reserved: u16,
+    signature: u32,
+    packet_type: u8,
+    seq_num: u8,
+    flags: u16,
+    key_size: u16,
+    reserved: u16,
     pub public_key: Vec<u8>,
     pub nonce: [u8; 32],
     pub cbt: [u8; 32],
-    pub mac: [u8; 32],
+    mac: [u8; 32],
 }
 
 impl SrdMessage for SrdAccept {

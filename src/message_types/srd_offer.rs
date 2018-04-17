@@ -7,11 +7,11 @@ use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdOffer {
-    pub signature: u32,
-    pub packet_type: u8,
-    pub seq_num: u8,
-    pub flags: u16,
-    pub key_size: u16,
+    signature: u32,
+    packet_type: u8,
+    seq_num: u8,
+    flags: u16,
+    key_size: u16,
     pub generator: Vec<u8>,
     pub prime: Vec<u8>,
     pub public_key: Vec<u8>,
@@ -104,6 +104,8 @@ impl SrdOffer {
             nonce,
         }
     }
+
+    pub fn key_size(&self) -> u16 { self.key_size }
 }
 
 #[cfg(test)]
