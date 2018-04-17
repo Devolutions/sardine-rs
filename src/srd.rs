@@ -434,31 +434,3 @@ impl Srd {
         self.iv.clone_from_slice(&hash.result().to_vec()[0..16]);
     }
 }
-
-/*fn convert_and_pad_to_cstr(rng: &mut OsRng, str: &str) -> Result<[u8; 128]> {
-    //TODO: Block large username and password
-    let mut cstr = [0u8; 128];
-    std::ffi::CString::new(str)?
-        .as_bytes_with_nul()
-        .read(&mut cstr)?;
-    let index = match cstr.iter().enumerate().find(|&x| *x.1 == b'\x00') {
-        None => {
-            return Err(SrdError::InvalidCstr);
-        }
-        Some(t) => t.0,
-    };
-    for i in index + 1..cstr.len() {
-        cstr[i] = rng.gen::<u8>();
-    }
-    Ok(cstr)
-}
-
-fn convert_and_unpad_from_cstr(data: &[u8]) -> Result<String> {
-    let index = match data.iter().enumerate().find(|&x| *x.1 == b'\x00') {
-        None => {
-            return Err(SrdError::InvalidCstr);
-        }
-        Some(t) => t.0,
-    };
-    Ok(String::from_utf8(data[0..index].to_vec())?)
-}*/
