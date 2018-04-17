@@ -1,7 +1,7 @@
 use std;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{SrdMessage, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE};
+use message_types::{SrdPacket, SrdMessage, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE};
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -14,10 +14,10 @@ pub struct SrdInitiate {
     reserved: u16,
 }
 
-impl SrdMessage for SrdInitiate {
+impl SrdMessage for SrdInitiate{
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         Ok(SrdInitiate {
             signature: buffer.read_u32::<LittleEndian>()?,
@@ -38,7 +38,9 @@ impl SrdMessage for SrdInitiate {
         buffer.write_u16::<LittleEndian>(self.reserved)?;
         Ok(())
     }
+}
 
+impl SrdPacket for SrdInitiate {
     fn id(&self) -> u8 {
         SRD_INITIATE_MSG_ID
     }
@@ -72,7 +74,7 @@ impl SrdInitiate {
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdInitiate, SrdMessage, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE};
+    use message_types::{SrdInitiate, SrdMessage, SrdPacket, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE};
 
     #[test]
     fn initiate_encoding() {

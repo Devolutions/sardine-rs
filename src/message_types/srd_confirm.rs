@@ -3,7 +3,7 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{SrdMessage, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
+use message_types::{SrdPacket, SrdMessage, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC},
                     srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
 use Result;
 
@@ -19,8 +19,8 @@ pub struct SrdConfirm {
 
 impl SrdMessage for SrdConfirm {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         let signature = buffer.read_u32::<LittleEndian>()?;
         let packet_type = buffer.read_u8()?;
@@ -48,7 +48,9 @@ impl SrdMessage for SrdConfirm {
         buffer.write_all(&self.mac)?;
         Ok(())
     }
+}
 
+impl SrdPacket for SrdConfirm {
     fn id(&self) -> u8 {
         SRD_CONFIRM_MSG_ID
     }
@@ -84,7 +86,7 @@ impl SrdConfirm {
     pub fn new(
         seq_num: u8,
         cbt_opt: Option<[u8; 32]>,
-        previous_messages: &[Box<SrdMessage>],
+        previous_messages: &[Box<SrdPacket>],
         integrity_key: &[u8],
     ) -> Result<Self> {
         let mut cbt = [0u8; 32];
@@ -118,7 +120,7 @@ impl SrdConfirm {
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdConfirm, SrdMessage, srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
+    use message_types::{SrdConfirm, SrdMessage, SrdPacket, srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
 
     #[test]
     fn confirm_encoding() {

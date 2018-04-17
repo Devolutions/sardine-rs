@@ -8,9 +8,12 @@ use sha2::Sha256;
 
 pub trait SrdMessage {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized;
+        where
+            Self: Sized;
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
+}
+
+pub trait SrdPacket: SrdMessage {
     fn id(&self) -> u8;
     fn signature(&self) -> u32;
     fn seq_num(&self) -> u8;
@@ -27,7 +30,7 @@ pub trait SrdMessage {
 
     fn compute_mac(
         &mut self,
-        previous_messages: &[Box<SrdMessage>],
+        previous_messages: &[Box<SrdPacket>],
         integrity_key: &[u8],
     ) -> Result<()> {
         let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
@@ -47,7 +50,7 @@ pub trait SrdMessage {
 
     fn verify_mac(
         &self,
-        previous_messages: &[Box<SrdMessage>],
+        previous_messages: &[Box<SrdPacket>],
         integrity_key: &[u8],
     ) -> Result<()> {
         let message_mac = match self.mac() {

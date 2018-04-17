@@ -2,7 +2,7 @@ use std;
 use std::io::{Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{expand_start, SrdMessage, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
+use message_types::{expand_start, SrdPacket, SrdMessage, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -18,10 +18,10 @@ pub struct SrdOffer {
     pub nonce: [u8; 32],
 }
 
-impl SrdMessage for SrdOffer {
+impl SrdMessage for SrdOffer{
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         let signature = buffer.read_u32::<LittleEndian>()?;
         let packet_type = buffer.read_u8()?;
@@ -65,7 +65,9 @@ impl SrdMessage for SrdOffer {
 
         Ok(())
     }
+}
 
+impl SrdPacket for SrdOffer {
     fn id(&self) -> u8 {
         SRD_OFFER_MSG_ID
     }
@@ -113,7 +115,7 @@ impl SrdOffer {
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdMessage, SrdOffer, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
+    use message_types::{SrdMessage, SrdPacket, SrdOffer, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
 
     #[test]
     fn offer_encoding() {

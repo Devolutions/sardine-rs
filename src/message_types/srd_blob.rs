@@ -5,13 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use rand::{OsRng, Rng};
 use Result;
-
-pub trait SrdBlobInterface {
-    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
-    where
-        Self: Sized;
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
-}
+use message_types::SrdMessage;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdBlob {
@@ -28,8 +22,8 @@ impl SrdBlob {
     }
 }
 
-impl SrdBlobInterface for SrdBlob {
-    fn read_from(buffer: &mut std::io::Cursor<Vec<u8>>) -> Result<Self>
+impl SrdMessage for SrdBlob {
+    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
     where
         Self: Sized,
     {
@@ -87,7 +81,7 @@ impl SrdBlobInterface for SrdBlob {
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdBlob, SrdBlobInterface};
+    use message_types::{SrdBlob, SrdMessage};
 
     #[test]
     fn blob_encoding() {
@@ -99,7 +93,7 @@ mod test {
             Err(_) => assert!(false),
         };
 
-        let mut cursor = std::io::Cursor::new(buffer);
+        let mut cursor = std::io::Cursor::new(buffer.as_slice());
         match SrdBlob::read_from(&mut cursor) {
             Ok(blob) => {
                 assert_eq!(blob, srd_blob);

@@ -22,7 +22,7 @@ pub struct Srd {
     seq_num: u8,
     state: u8,
 
-    messages: Vec<Box<SrdMessage>>,
+    messages: Vec<Box<SrdPacket>>,
 
     cert_data: Option<Vec<u8>>,
 
@@ -94,7 +94,7 @@ impl Srd {
         }
     }
 
-    fn write_msg<T: SrdMessage>(&mut self, msg: &T, buffer: &mut Vec<u8>) -> Result<()> {
+    fn write_msg<T: SrdPacket>(&mut self, msg: &T, buffer: &mut Vec<u8>) -> Result<()> {
         if msg.signature() != SRD_SIGNATURE {
             return Err(SrdError::InvalidSignature);
         }
@@ -108,9 +108,9 @@ impl Srd {
         Ok(())
     }
 
-    fn read_msg<T: SrdMessage>(&mut self, buffer: &[u8]) -> Result<T>
+    fn read_msg<T: SrdPacket>(&mut self, buffer: &[u8]) -> Result<T>
     where
-        T: SrdMessage,
+        T: SrdPacket,
     {
         let mut reader = std::io::Cursor::new(buffer);
         let packet = T::read_from(&mut reader)?;

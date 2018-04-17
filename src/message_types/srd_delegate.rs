@@ -8,7 +8,7 @@ use crypto::{aes, buffer, blockmodes::NoPadding};
 #[cfg(all(target_arch = "wasm32"))]
 use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
 
-use message_types::{SrdBlob, SrdBlobInterface, SrdMessage, srd_flags::SRD_FLAG_MAC,
+use message_types::{SrdBlob, SrdMessage, SrdPacket, srd_flags::SRD_FLAG_MAC,
                     srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
 use Result;
 use srd_errors::SrdError;
@@ -28,8 +28,8 @@ pub struct SrdDelegate {
 
 impl SrdMessage for SrdDelegate {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         let signature = buffer.read_u32::<LittleEndian>()?;
         let packet_type = buffer.read_u8()?;
@@ -60,7 +60,9 @@ impl SrdMessage for SrdDelegate {
         buffer.write_all(&self.mac)?;
         Ok(())
     }
+}
 
+impl SrdPacket for SrdDelegate {
     fn id(&self) -> u8 {
         SRD_DELEGATE_MSG_ID
     }
@@ -96,7 +98,7 @@ impl SrdDelegate {
     pub fn new(
         seq_num: u8,
         srd_blob: &SrdBlob,
-        previous_messages: &[Box<SrdMessage>],
+        previous_messages: &[Box<SrdPacket>],
         integrity_key: &[u8],
         delegation_key: &[u8],
         iv: &[u8],
@@ -122,7 +124,7 @@ impl SrdDelegate {
     pub fn get_data(&self, key: &[u8], iv: &[u8]) -> Result<SrdBlob> {
         let buffer = decrypt_data(&self.encrypted_blob, key, iv)?;
 
-        let mut cursor = std::io::Cursor::new(buffer);
+        let mut cursor = std::io::Cursor::new(buffer.as_slice());
         let srd_blob = SrdBlob::read_from(&mut cursor)?;
         Ok(srd_blob)
     }
