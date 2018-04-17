@@ -25,3 +25,14 @@ pub use srd_errors::SrdError;
 
 #[cfg(test)]
 mod tests;
+
+//TODO Verify packet size before reading to send error instead of panicking
+//TODO Markdown documentation
+//TODO Reorder imports
+//TODO Reorder traits method
+//TODO Verify bignum/Diffie-Hellman optimization
+//TODO Comment subsections inside methods
+//TODO Create basic blobs described in specs
+//TODO Fix webassembly. It will use WebCryptoAPI's javascript function using wasm-bindgen. Still not sure how to use the object oriented model.
+
+// Note: Implementation runs way faster in release mode.
