@@ -1,5 +1,5 @@
 use srd::Srd;
-use message_types::SrdBlob;
+use srd_blob::BasicBlob;
 
 static TEST_CERT_DATA: &'static [u8] =
     b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x03\x02\x01\x02\x02\x10\x16
@@ -66,11 +66,8 @@ fn good_login() {
     client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
     server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
 
-    let srd_blob = SrdBlob::new(
-        "Basic",
-        &vec![99, 10, 2, 4, 0, 0, 2, 3, 2, 3, 4, 5, 6, 7, 8, 9],
-    );
-    client.set_blob(srd_blob.clone());
+    let basic_blob = BasicBlob::new("fdubois", "123456");
+    client.set_blob(basic_blob.clone()).unwrap();
 
     let mut client_status: bool = false;
     let mut server_status: bool = false;
@@ -90,5 +87,6 @@ fn good_login() {
     assert!(client_status);
     assert!(server_status);
 
-    assert_eq!(server.blob().clone().unwrap(), srd_blob);
+
+    assert_eq!(server.get_blob::<BasicBlob>().unwrap().unwrap(), basic_blob);
 }

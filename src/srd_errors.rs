@@ -19,6 +19,7 @@ pub enum SrdError {
     Ffi(NulError),
     BadSequence,
     MissingBlob,
+    BlobFormatError,
     InvalidKeySize,
     InvalidMac,
     InvalidCbt,
@@ -38,6 +39,7 @@ impl fmt::Display for SrdError {
             &SrdError::Ffi(ref _error) => write!(f, "FFI error"),
             &SrdError::BadSequence => write!(f, "Sequence error"),
             &SrdError::MissingBlob => write!(f, "Blob error"),
+            &SrdError::BlobFormatError => write!(f, "Blob format error"),
             &SrdError::InvalidKeySize => write!(f, "Key Size error"),
             &SrdError::InvalidMac => write!(f, "MAC error"),
             &SrdError::InvalidCbt => write!(f, "CBT error"),
@@ -61,6 +63,7 @@ impl std::error::Error for SrdError {
             }
             SrdError::BadSequence => "Unexpected packet received",
             SrdError::MissingBlob => "No blob specified",
+            SrdError::BlobFormatError => "Blob format error",
             SrdError::InvalidKeySize => "Key size must be 256, 512 or 1024",
             SrdError::InvalidMac => "Message authentication code is invalid",
             SrdError::InvalidCbt => "Channel binding token is invalid",

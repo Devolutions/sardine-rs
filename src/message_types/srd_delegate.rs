@@ -8,8 +8,9 @@ use crypto::{aes, buffer, blockmodes::NoPadding};
 #[cfg(all(target_arch = "wasm32"))]
 use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
 
-use message_types::{SrdBlob, SrdMessage, SrdPacket, srd_flags::SRD_FLAG_MAC,
+use message_types::{SrdMessage, SrdPacket, srd_flags::SRD_FLAG_MAC,
                     srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
+use srd_blob::SrdBlob;
 use Result;
 use srd_errors::SrdError;
 use crypto::buffer::WriteBuffer;
