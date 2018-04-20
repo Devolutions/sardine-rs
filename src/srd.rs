@@ -12,6 +12,7 @@ use sha2::Sha256;
 use Result;
 use srd_errors::SrdError;
 use message_types::*;
+use srd_blob::{Blob, SrdBlob};
 use dh_params::SRD_DH_PARAMS;
 
 pub struct Srd {
@@ -71,12 +72,27 @@ impl Srd {
         })
     }
 
+    pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
+        if self.blob.is_some() {
+            let blob = self.blob.as_ref().unwrap();
+            if blob.blob_type == T::blob_type() {
+                let mut cursor = std::io::Cursor::new(blob.data.as_slice());
+                return Ok(Some(T::read_from(&mut cursor)?));
+            }
+        }
+
+        Ok(None)
+    }
+
     pub fn blob(&self) -> &Option<SrdBlob> {
         &self.blob
     }
 
-    pub fn set_blob(&mut self, blob: SrdBlob) {
-        self.blob = Some(blob)
+    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
+        let mut data = Vec::new();
+        blob.write_to(&mut data)?;
+        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
+        Ok(())
     }
 
     pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {

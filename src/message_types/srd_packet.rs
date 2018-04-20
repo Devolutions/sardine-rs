@@ -7,7 +7,7 @@ use sha2::Sha256;
 
 use message_types::SrdMessage;
 
-pub trait SrdPacket: SrdMessage {
+pub trait SrdPacket: SrdMessage + Send + Sync {
     //Accessors
     fn id(&self) -> u8;
     fn signature(&self) -> u32;

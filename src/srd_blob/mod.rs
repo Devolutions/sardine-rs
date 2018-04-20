@@ -7,6 +7,11 @@ use rand::{OsRng, Rng};
 use Result;
 use message_types::SrdMessage;
 
+mod basic_blob;
+mod logon_blob;
+pub use self::basic_blob::BasicBlob;
+pub use self::logon_blob::LogonBlob;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdBlob {
     pub blob_type: String,
@@ -24,8 +29,8 @@ impl SrdBlob {
 
 impl SrdMessage for SrdBlob {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         let type_size = buffer.read_u16::<LittleEndian>()?;
         let type_padding = buffer.read_u16::<LittleEndian>()?;
@@ -78,10 +83,20 @@ impl SrdMessage for SrdBlob {
     }
 }
 
+pub trait Blob
+{
+    fn blob_type() -> &'static str;
+    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
+        where
+            Self: Sized;
+    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
+}
+
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdBlob, SrdMessage};
+    use message_types::SrdMessage;
+    use srd_blob::SrdBlob;
 
     #[test]
     fn blob_encoding() {

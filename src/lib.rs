@@ -13,6 +13,7 @@ extern crate aes_soft;
 #[cfg(all(target_arch = "wasm32"))]
 extern crate wasm_bindgen;
 
+pub mod srd_blob;
 mod message_types;
 mod srd;
 mod srd_errors;
@@ -20,7 +21,6 @@ mod dh_params;
 
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use srd::Srd;
-pub use message_types::SrdBlob;
 pub use srd_errors::SrdError;
 
 #[cfg(test)]
