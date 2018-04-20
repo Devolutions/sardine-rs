@@ -8,6 +8,8 @@ rand = "0.4"
 hmac = "0.6"
 sha2 = "0.7"
 digest = "0.7"
+aes-soft = { version = "0.1", optional = true }
+wasm-bindgen = { version = "0.2.2", optional = true}
 
 num-bigint = {version = "0.1", default_features = false}
 num-traits = {version = "0.1", default_features = false}
@@ -17,10 +19,6 @@ byteorder = "1.2"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rust-crypto = "0.2"
 
-[target.'cfg(all(target_arch = "wasm32"))'.dependencies]
-aes-soft = "0.1"
-wasm-bindgen = "0.2.2"
-
-
-#[target.'cfg(all(target_arch = "wasm32"))'.lib]
-#crate-type = ["cdylib"]
+[features]
+default = []
+webassembly = ["aes-soft", "wasm-bindgen"]
