@@ -5,6 +5,7 @@ use std::io::Write;
 use Result;
 use srd_errors::SrdError;
 use srd_blob::Blob;
+use message_types::SrdMessage;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BasicBlob {
@@ -25,6 +26,8 @@ impl Blob for BasicBlob {
         "Basic"
     }
 
+}
+impl SrdMessage for BasicBlob {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self> where Self: Sized {
         let mut str_buffer = Vec::new();
         buffer.read_to_end(&mut str_buffer)?;

@@ -5,6 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use Result;
 use srd_blob::Blob;
+use message_types::SrdMessage;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LogonBlob {
@@ -28,11 +29,14 @@ impl LogonBlob {
         self.password.clone()
     }
 }
+
 impl Blob for LogonBlob {
     fn blob_type() -> &'static str {
         "Logon"
     }
+}
 
+impl SrdMessage for LogonBlob {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self> where Self: Sized {
         let username_length = buffer.read_u16::<LittleEndian>()?;
         let password_length = buffer.read_u16::<LittleEndian>()?;

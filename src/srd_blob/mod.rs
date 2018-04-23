@@ -83,13 +83,9 @@ impl SrdMessage for SrdBlob {
     }
 }
 
-pub trait Blob
+pub trait Blob: SrdMessage
 {
     fn blob_type() -> &'static str;
-    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-        where
-            Self: Sized;
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()>;
 }
 
 #[cfg(test)]
