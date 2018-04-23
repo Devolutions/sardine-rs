@@ -19,6 +19,14 @@ impl LogonBlob {
             password: password.to_string(),
         }
     }
+
+    pub fn get_username(&self) -> String {
+        self.username.clone()
+    }
+
+    pub fn get_password(&self) -> String {
+        self.password.clone()
+    }
 }
 impl Blob for LogonBlob {
     fn blob_type() -> &'static str {
