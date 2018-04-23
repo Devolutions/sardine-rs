@@ -1,0 +1,10 @@
+[package]
+name = "hyper-sardine"
+version = "0.1.0"
+authors = ["François Dubois <fdubois@devolutions.net>"]
+
+[dependencies]
+base64 = "0.6"
+hyper = "0.11"
+log = "0.4.1"
+uuid = { version = "0.6", features = ["v4"] }
