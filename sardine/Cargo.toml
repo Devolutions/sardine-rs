@@ -3,6 +3,10 @@ name = "sardine-rs"
 version = "0.1.0"
 authors = ["pdugre"]
 
+[lib]
+name = "sardine_rs"
+crate-type = ["staticlib"]
+
 [dependencies]
 rand = "0.4"
 hmac = "0.6"

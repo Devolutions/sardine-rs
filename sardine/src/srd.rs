@@ -15,6 +15,8 @@ use message_types::*;
 use srd_blob::{Blob, SrdBlob};
 use dh_params::SRD_DH_PARAMS;
 
+use std::os::raw::{c_void};
+
 pub struct Srd {
     blob: Option<SrdBlob>,
 
@@ -40,6 +42,20 @@ pub struct Srd {
     secret_key: Vec<u8>,
 
     rng: OsRng,
+}
+
+
+#[no_mangle]
+pub extern "C" fn Srd_New() -> *mut c_void {
+    match Srd::new(true) {
+        Ok(srd_new) => {
+            return Box::into_raw(Box::new(srd_new)) as *mut c_void
+        }
+        Err(_) => {
+//                error!("{}", e);
+            return std::ptr::null_mut();
+        }
+    }
 }
 
 impl Srd {
