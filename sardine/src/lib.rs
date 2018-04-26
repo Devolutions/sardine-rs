@@ -18,6 +18,7 @@ mod message_types;
 mod srd;
 mod srd_errors;
 mod dh_params;
+pub mod ffi;
 
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use srd::Srd;
@@ -36,3 +37,4 @@ mod tests;
 //TODO Fix webassembly. It will use WebCryptoAPI's javascript function using wasm-bindgen. Still not sure how to use the object oriented model.
 
 // Note: Implementation runs way faster in release mode.
+

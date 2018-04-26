@@ -15,10 +15,10 @@ use message_types::*;
 use srd_blob::{Blob, SrdBlob};
 use dh_params::SRD_DH_PARAMS;
 
-use std::os::raw::{c_void};
 
 pub struct Srd {
     blob: Option<SrdBlob>,
+    output_data: Option<Vec<u8>>,
 
     is_server: bool,
     key_size: u16,
@@ -44,24 +44,11 @@ pub struct Srd {
     rng: OsRng,
 }
 
-
-#[no_mangle]
-pub extern "C" fn Srd_New() -> *mut c_void {
-    match Srd::new(true) {
-        Ok(srd_new) => {
-            return Box::into_raw(Box::new(srd_new)) as *mut c_void
-        }
-        Err(_) => {
-//                error!("{}", e);
-            return std::ptr::null_mut();
-        }
-    }
-}
-
 impl Srd {
     pub fn new(is_server: bool) -> Result<Srd> {
         Ok(Srd {
             blob: None,
+            output_data: None,
 
             is_server,
             key_size: 256,
@@ -100,15 +87,19 @@ impl Srd {
         Ok(None)
     }
 
-    pub fn blob(&self) -> &Option<SrdBlob> {
-        &self.blob
-    }
-
     pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
         let mut data = Vec::new();
         blob.write_to(&mut data)?;
         self.blob = Some(SrdBlob::new(T::blob_type(), &data));
         Ok(())
+    }
+
+    pub fn get_raw_blob(&self) -> Option<SrdBlob> {
+        return self.blob.clone();
+    }
+
+    pub fn set_raw_blob(&mut self, blob: SrdBlob) {
+        self.blob = Some(blob);
     }
 
     pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
@@ -161,6 +152,9 @@ impl Srd {
     }
 
     pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
+        // We don't want anybody to access previous output_data.
+        self.output_data = None;
+
         if self.is_server {
             match self.state {
                 0 => self.server_authenticate_0(input_data, output_data)?,
@@ -186,6 +180,14 @@ impl Srd {
         }
         self.state += 1;
         Ok(false)
+    }
+
+    pub fn get_output_data(&self) -> &Option<Vec<u8>> {
+        &self.output_data
+    }
+
+    pub fn set_output_data(&mut self, output_data: Vec<u8>) {
+        self.output_data = Some(output_data);
     }
 
     // Client initiate
