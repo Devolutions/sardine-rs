@@ -72,13 +72,14 @@ pub extern "C" fn Srd_Output(srd_handle: *mut Srd, buffer: *mut u8, buffer_size:
 pub extern "C" fn Srd_SetBlob(srd_handle: *mut Srd, blob_name: *const u8, blob_name_size: libc::c_int, blob_data: *const libc::c_uchar, blob_data_size: libc::c_int,) -> libc::c_int {
     let mut status = -1;
     let srd = unsafe { &mut *srd_handle };
-    //let blob_type = unsafe { CStr::from_ptr(blob_type).to_owned() };
+
     let blob_name = unsafe { std::slice::from_raw_parts::<u8>(blob_name, blob_name_size as usize) };
     let blob_data = unsafe { std::slice::from_raw_parts::<u8>(blob_data, blob_data_size as usize) };
+    let blob_name_len = blob_name.len();
 
     // Last char has to be a null char (0)
-    if blob_name[blob_name.len()-1] == 0 {
-        if let Ok(blob_name) = std::str::from_utf8(&blob_name[..blob_name.len()-1]) {
+    if blob_name_len > 0 && blob_name[blob_name_len - 1] == 0 {
+        if let Ok(blob_name) = std::str::from_utf8(&blob_name[..blob_name_len-1]) {
             srd.set_raw_blob(SrdBlob::new(&blob_name, blob_data));
             status = 1;
         }
