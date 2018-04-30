@@ -29,8 +29,8 @@ impl SrdBlob {
 
 impl SrdMessage for SrdBlob {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         let type_size = buffer.read_u16::<LittleEndian>()?;
         let type_padding = buffer.read_u16::<LittleEndian>()?;
@@ -83,8 +83,7 @@ impl SrdMessage for SrdBlob {
     }
 }
 
-pub trait Blob: SrdMessage
-{
+pub trait Blob: SrdMessage {
     fn blob_type() -> &'static str;
 }
 

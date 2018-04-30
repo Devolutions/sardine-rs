@@ -4,14 +4,12 @@ extern crate libc;
 
 use std;
 use srd::Srd;
-use srd_blob::{SrdBlob};
+use srd_blob::SrdBlob;
 
 #[no_mangle]
 pub extern "C" fn Srd_New(is_server: bool) -> *mut Srd {
     match Srd::new(is_server) {
-        Ok(srd_new) => {
-            Box::into_raw(Box::new(srd_new)) as *mut Srd
-        }
+        Ok(srd_new) => Box::into_raw(Box::new(srd_new)) as *mut Srd,
         Err(_) => {
             return std::ptr::null_mut();
         }
@@ -21,7 +19,7 @@ pub extern "C" fn Srd_New(is_server: bool) -> *mut Srd {
 #[no_mangle]
 pub extern "C" fn Srd_Free(srd_handle: *mut Srd) {
     // Will be deleted when the srd will go out of scope
-    let _srd = unsafe { Box::from_raw(srd_handle ) };
+    let _srd = unsafe { Box::from_raw(srd_handle) };
 }
 
 #[no_mangle]
@@ -36,8 +34,7 @@ pub extern "C" fn Srd_Input(srd_handle: *mut Srd, buffer: *const u8, buffer_size
             srd.set_output_data(output_data);
             if is_finished {
                 return 0;
-            }
-            else {
+            } else {
                 return 1;
             }
         }
@@ -69,7 +66,13 @@ pub extern "C" fn Srd_Output(srd_handle: *mut Srd, buffer: *mut u8, buffer_size:
 }
 
 #[no_mangle]
-pub extern "C" fn Srd_SetBlob(srd_handle: *mut Srd, blob_name: *const u8, blob_name_size: libc::c_int, blob_data: *const libc::c_uchar, blob_data_size: libc::c_int,) -> libc::c_int {
+pub extern "C" fn Srd_SetBlob(
+    srd_handle: *mut Srd,
+    blob_name: *const u8,
+    blob_name_size: libc::c_int,
+    blob_data: *const libc::c_uchar,
+    blob_data_size: libc::c_int,
+) -> libc::c_int {
     let mut status = -1;
     let srd = unsafe { &mut *srd_handle };
 
@@ -79,7 +82,7 @@ pub extern "C" fn Srd_SetBlob(srd_handle: *mut Srd, blob_name: *const u8, blob_n
 
     // Last char has to be a null char (0)
     if blob_name_len > 0 && blob_name[blob_name_len - 1] == 0 {
-        if let Ok(blob_name) = std::str::from_utf8(&blob_name[..blob_name_len-1]) {
+        if let Ok(blob_name) = std::str::from_utf8(&blob_name[..blob_name_len - 1]) {
             srd.set_raw_blob(SrdBlob::new(&blob_name, blob_data));
             status = 1;
         }

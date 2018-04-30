@@ -1,8 +1,8 @@
-#[macro_use]
-extern crate log;
 extern crate base64;
 #[macro_use]
 extern crate hyper;
+#[macro_use]
+extern crate log;
 extern crate uuid;
 use uuid::Uuid;
 

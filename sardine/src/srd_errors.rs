@@ -58,9 +58,7 @@ impl std::error::Error for SrdError {
             SrdError::Io(ref error) => error.description(),
             #[cfg(not(target_arch = "wasm32"))]
             SrdError::Crypto(ref _error) => "There was a problem while encrypting or decrypting",
-            SrdError::Ffi(ref _error) => {
-                "There was an error while manipulating null-terminated strings"
-            }
+            SrdError::Ffi(ref _error) => "There was an error while manipulating null-terminated strings",
             SrdError::BadSequence => "Unexpected packet received",
             SrdError::MissingBlob => "No blob specified",
             SrdError::BlobFormatError => "Blob format error",
@@ -70,9 +68,7 @@ impl std::error::Error for SrdError {
             SrdError::InvalidCert => "Certificate is invalid or absent",
             SrdError::InvalidCredentials => "Received credentials are invalid!",
             SrdError::InvalidCstr => "Username or password is not null-terminated",
-            SrdError::InvalidDataLength => {
-                "The length of the data to be encrypted or decrypted is invalid"
-            }
+            SrdError::InvalidDataLength => "The length of the data to be encrypted or decrypted is invalid",
             SrdError::InvalidSignature => "Packet signature is invalid",
         }
     }

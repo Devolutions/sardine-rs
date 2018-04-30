@@ -25,13 +25,15 @@ impl Blob for BasicBlob {
     fn blob_type() -> &'static str {
         "Basic"
     }
-
 }
 impl SrdMessage for BasicBlob {
-    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self> where Self: Sized {
+    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let mut str_buffer = Vec::new();
         buffer.read_to_end(&mut str_buffer)?;
-        let full_str:String = str_buffer.iter().map(|c| *c as char).collect();
+        let full_str: String = str_buffer.iter().map(|c| *c as char).collect();
 
         let v: Vec<&str> = full_str.split(':').collect();
 
@@ -40,7 +42,6 @@ impl SrdMessage for BasicBlob {
         }
 
         Ok(BasicBlob::new(v[0], v[1]))
-
     }
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
         let mut full_str = self.username.clone();

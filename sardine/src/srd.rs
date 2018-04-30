@@ -15,7 +15,6 @@ use message_types::*;
 use srd_blob::{Blob, SrdBlob};
 use dh_params::SRD_DH_PARAMS;
 
-
 pub struct Srd {
     blob: Option<SrdBlob>,
     output_data: Option<Vec<u8>>,
@@ -201,11 +200,7 @@ impl Srd {
     }
 
     // Server initiate -> offer
-    fn server_authenticate_0(
-        &mut self,
-        input_data: &[u8],
-        mut output_data: &mut Vec<u8>,
-    ) -> Result<()> {
+    fn server_authenticate_0(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
         let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
         self.set_key_size(in_packet.key_size())?;
@@ -241,11 +236,7 @@ impl Srd {
     }
 
     // Client offer -> accept
-    fn client_authenticate_1(
-        &mut self,
-        input_data: &[u8],
-        mut output_data: &mut Vec<u8>,
-    ) -> Result<()> {
+    fn client_authenticate_1(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         //Challenge
         let in_packet = self.read_msg::<SrdOffer>(input_data)?;
 
@@ -306,11 +297,7 @@ impl Srd {
     }
 
     // Server accept -> confirm
-    fn server_authenticate_1(
-        &mut self,
-        input_data: &[u8],
-        mut output_data: &mut Vec<u8>,
-    ) -> Result<()> {
+    fn server_authenticate_1(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Response
         let in_packet = self.read_msg::<SrdAccept>(input_data)?;
         self.client_nonce = in_packet.nonce;
@@ -376,11 +363,7 @@ impl Srd {
     }
 
     // Client confirm -> delegate
-    fn client_authenticate_2(
-        &mut self,
-        input_data: &[u8],
-        mut output_data: &mut Vec<u8>,
-    ) -> Result<()> {
+    fn client_authenticate_2(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Confirm
         let in_packet = self.read_msg::<SrdConfirm>(input_data)?;
 

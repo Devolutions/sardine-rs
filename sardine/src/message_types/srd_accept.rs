@@ -148,8 +148,7 @@ impl SrdAccept {
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdAccept, SrdMessage, SrdPacket, srd_msg_id::SRD_ACCEPT_MSG_ID,
-                        SRD_SIGNATURE};
+    use message_types::{SrdAccept, SrdMessage, SrdPacket, srd_msg_id::SRD_ACCEPT_MSG_ID, SRD_SIGNATURE};
 
     #[test]
     fn accept_encoding() {
