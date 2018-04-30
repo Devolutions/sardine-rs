@@ -74,8 +74,7 @@ impl SrdInitiate {
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdInitiate, SrdMessage, SrdPacket, srd_msg_id::SRD_INITIATE_MSG_ID,
-                        SRD_SIGNATURE};
+    use message_types::{SrdInitiate, SrdMessage, SrdPacket, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE};
 
     #[test]
     fn initiate_encoding() {

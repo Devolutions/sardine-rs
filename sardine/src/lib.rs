@@ -37,4 +37,3 @@ mod tests;
 //TODO Fix webassembly. It will use WebCryptoAPI's javascript function using wasm-bindgen. Still not sure how to use the object oriented model.
 
 // Note: Implementation runs way faster in release mode.
-

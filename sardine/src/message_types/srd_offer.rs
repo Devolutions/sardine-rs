@@ -2,8 +2,7 @@ use std;
 use std::io::{Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use message_types::{expand_start, SrdMessage, SrdPacket, srd_msg_id::SRD_OFFER_MSG_ID,
-                    SRD_SIGNATURE};
+use message_types::{expand_start, SrdMessage, SrdPacket, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -116,8 +115,7 @@ impl SrdOffer {
 #[cfg(test)]
 mod test {
     use std;
-    use message_types::{SrdMessage, SrdOffer, SrdPacket, srd_msg_id::SRD_OFFER_MSG_ID,
-                        SRD_SIGNATURE};
+    use message_types::{SrdMessage, SrdOffer, SrdPacket, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
 
     #[test]
     fn offer_encoding() {

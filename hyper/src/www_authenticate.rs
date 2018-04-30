@@ -42,12 +42,12 @@ impl header::Header for WWWAuthenticate {
             let scheme = "SRD";
             if header.starts_with(scheme) {
                 if scheme.len() + 1 < line.len() {
-                    let bytes = match base64::decode(&header[scheme.len()+1..]) {
+                    let bytes = match base64::decode(&header[scheme.len() + 1..]) {
                         Err(_) => return Err(hyper::Error::Header),
                         Ok(x) => x,
                     };
                     pairs.push((AuthenticateScheme::Srd, Some(bytes)));
-                }  else {
+                } else {
                     pairs.push((AuthenticateScheme::Srd, None))
                 }
             }

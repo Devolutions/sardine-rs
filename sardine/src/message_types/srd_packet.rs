@@ -23,11 +23,7 @@ pub trait SrdPacket: SrdMessage + Send + Sync {
 
     fn set_mac(&mut self, _mac: &[u8]) {}
 
-    fn compute_mac(
-        &mut self,
-        previous_messages: &[Box<SrdPacket>],
-        integrity_key: &[u8],
-    ) -> Result<()> {
+    fn compute_mac(&mut self, previous_messages: &[Box<SrdPacket>], integrity_key: &[u8]) -> Result<()> {
         let mut hmac = Hmac::<Sha256>::new_varkey(&integrity_key)?;
 
         let mut buffer = Vec::new();
