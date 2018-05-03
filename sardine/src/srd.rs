@@ -93,6 +93,10 @@ impl Srd {
         Ok(())
     }
 
+    pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
+        (self.delegation_key, self.integrity_key)
+    }
+
     pub fn get_raw_blob(&self) -> Option<SrdBlob> {
         return self.blob.clone();
     }
