@@ -28,6 +28,15 @@ impl WWWAuthenticate {
         self.0.push((scheme, data));
         self
     }
+    pub fn get_msg(&self, index: usize) -> Option<Vec<u8>> {
+        match self.0.get(index) {
+            None => None,
+            Some(s) => match s.1 {
+                None => None,
+                Some(ref m) => Some(m.clone()),
+            },
+        }
+    }
 }
 
 impl header::Header for WWWAuthenticate {
