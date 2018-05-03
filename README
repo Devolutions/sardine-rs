@@ -1,7 +1,0 @@
-Secure Remote Delegation protocol written in Rust. To compile on Windows-Linux-Mac, run :
-cargo build --release
-
-To build as webassembly, install target wasm32-unknown-unknown and cargo web(using cargo install cargo-web) and use :
-cargo +nightly web build --release
-
-Note that webassembly build only works on release mode

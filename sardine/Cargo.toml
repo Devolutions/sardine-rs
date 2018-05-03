@@ -1,7 +1,14 @@
 [package]
 name = "sardine-rs"
 version = "0.1.0"
-authors = ["pdugre"]
+license = "MIT/Apache-2.0"
+homepage = "https://github.com/wayk/sardine-rs"
+repository = "https://github.com/wayk/sardine-rs"
+keywords = ["srd", "delegation", "authentication", "protocol"]
+description = "Secure Remote Delegation (SRD) Authentication Protocol"
+authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
+           "Philippe Dugre <pdugre@devolutions.net>",
+           "François Dubois <francois.dubois.x@gmail.com>"]
 
 [lib]
 name = "sardine_rs"
@@ -28,3 +35,4 @@ rust-crypto = "0.2"
 [features]
 default = []
 webassembly = ["aes-soft", "wasm-bindgen"]
+
