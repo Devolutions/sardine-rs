@@ -1,5 +1,5 @@
 [package]
-name = "sardine-rs"
+name = "sardine"
 version = "0.1.0"
 license = "MIT/Apache-2.0"
 homepage = "https://github.com/wayk/sardine-rs"
@@ -11,7 +11,7 @@ authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
            "François Dubois <francois.dubois.x@gmail.com>"]
 
 [lib]
-name = "sardine_rs"
+name = "sardine"
 crate-type = ["staticlib", "lib"]
 
 [dependencies]

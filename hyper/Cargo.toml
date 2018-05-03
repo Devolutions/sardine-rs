@@ -1,7 +1,14 @@
 [package]
-name = "hyper-sardine"
+name = "hyper_sardine"
 version = "0.1.0"
-authors = ["François Dubois <fdubois@devolutions.net>"]
+license = "MIT/Apache-2.0"
+homepage = "https://github.com/wayk/sardine-rs"
+repository = "https://github.com/wayk/sardine-rs"
+keywords = ["srd", "delegation", "authentication", "protocol"]
+description = "Secure Remote Delegation (SRD) Authentication Protocol"
+authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
+           "Philippe Dugre <pdugre@devolutions.net>",
+           "François Dubois <francois.dubois.x@gmail.com>"]
 
 [dependencies]
 base64 = "0.6"
