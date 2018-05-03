@@ -14,4 +14,3 @@ pub use www_authenticate::AuthenticateScheme;
 pub use srd_scheme::SrdAuthorizationScheme;
 
 header! { (AuthId, "Auth-ID") => [Uuid] }
-header! { (Signature, "Signature") => [String]}
