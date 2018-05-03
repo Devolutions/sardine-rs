@@ -9,8 +9,6 @@ extern crate sha2;
 extern crate crypto;
 
 #[cfg(all(target_arch = "wasm32"))]
-extern crate aes_soft;
-#[cfg(all(target_arch = "wasm32"))]
 extern crate wasm_bindgen;
 
 pub mod srd_blob;

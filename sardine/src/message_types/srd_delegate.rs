@@ -5,9 +5,6 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 #[cfg(not(target_arch = "wasm32"))]
 use crypto::{aes, buffer, blockmodes::NoPadding};
 
-#[cfg(all(target_arch = "wasm32"))]
-use aes_soft::{Aes256, BlockCipher, block_cipher_trait::generic_array::GenericArray};
-
 use message_types::{SrdMessage, SrdPacket, srd_flags::SRD_FLAG_MAC, srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
 use srd_blob::SrdBlob;
 use Result;
@@ -159,30 +156,7 @@ fn encrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
 
 #[cfg(all(target_arch = "wasm32"))]
 fn encrypt_data(username: &[u8], password: &[u8], key: &[u8], iv: &[u8]) -> Result<()> {
-    //  The library is really barebone, so we need to reimplement CBC
-    let cipher = Aes256::new_varkey(key)?;
-
-    let mut data = Vec::new();
-    data.write_all(username)?;
-    data.write_all(password)?;
-
-    let mut result = Vec::with_capacity(256 + 16);
-
-    // First block is IV
-    result.extend_from_slice(&iv[0..16]);
-
-    for i in 0..16 {
-        let mut b = GenericArray::clone_from_slice(&xor_block(
-            &result[i * 16..i * 16 + 16],
-            &data[i * 16..i * 16 + 16],
-        ));
-        cipher.encrypt_block(&mut b);
-        result.extend_from_slice(b.as_slice());
-    }
-
-    self.data.clone_from_slice(&result[16..256 + 16]);
-
-    Ok(())
+    unimplemented!();
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -215,55 +189,7 @@ pub fn decrypt_data(enc_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
 
 #[cfg(all(target_arch = "wasm32"))]
 pub fn decrypt_data(key: &[u8], iv: &[u8]) -> Result<[u8; 256]> {
-    let cipher = Aes256::new_varkey(key)?;
-
-    let mut result = Vec::with_capacity(256);
-
-    let b = GenericArray::clone_from_slice(&[0u8; 16]);
-    let mut blocks1 = GenericArray::clone_from_slice(&[b; 8]);
-    let mut blocks2 = GenericArray::clone_from_slice(&[b; 8]);
-
-    for i in 0..8 {
-        blocks1[i] = GenericArray::clone_from_slice(&self.data[i * 16..i * 16 + 16]);
-    }
-    for i in 8..16 {
-        blocks2[i - 8] = GenericArray::clone_from_slice(&self.data[i * 16..i * 16 + 16]);
-    }
-
-    cipher.decrypt_blocks(&mut blocks1);
-    cipher.decrypt_blocks(&mut blocks2);
-
-    result.extend_from_slice(&xor_block(&iv[0..16], blocks1[0].as_slice()));
-
-    for i in 1..8 {
-        result.extend_from_slice(&xor_block(
-            &self.data[(i - 1) * 16..(i - 1) * 16 + 16],
-            blocks1[i].as_slice(),
-        ));
-    }
-    for i in 8..16 {
-        result.extend_from_slice(&xor_block(
-            &self.data[(i - 1) * 16..(i - 1) * 16 + 16],
-            blocks2[i - 8].as_slice(),
-        ));
-    }
-
-    let mut data = [0u8; 256];
-    data.clone_from_slice(&result);
-
-    println!("{:?}", data.to_vec());
-
-    Ok(data)
-}
-
-#[cfg(all(target_arch = "wasm32"))]
-fn xor_block(a: &[u8], b: &[u8]) -> [u8; 16] {
-    let mut result = [0u8; 16];
-    for i in 0..16 {
-        result[i] = a[i] ^ b[i];
-    }
-
-    result
+    unimplemented!();
 }
 
 //#[cfg(test)]
