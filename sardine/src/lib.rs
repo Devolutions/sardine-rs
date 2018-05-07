@@ -1,3 +1,4 @@
+extern crate aes_frast;
 extern crate byteorder;
 extern crate digest;
 extern crate hmac;
@@ -5,10 +6,7 @@ extern crate num_bigint;
 extern crate rand;
 extern crate sha2;
 
-#[cfg(not(target_arch = "wasm32"))]
-extern crate crypto;
-
-#[cfg(all(target_arch = "wasm32"))]
+#[cfg(feature = "wasm")]
 extern crate wasm_bindgen;
 
 pub mod srd_blob;
