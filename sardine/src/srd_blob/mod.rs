@@ -12,18 +12,41 @@ mod logon_blob;
 pub use self::basic_blob::BasicBlob;
 pub use self::logon_blob::LogonBlob;
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct SrdBlob {
-    pub blob_type: String,
-    pub data: Vec<u8>,
+    blob_type: String,
+    data: Vec<u8>,
 }
 
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl SrdBlob {
     pub fn new(blob_type: &str, data: &[u8]) -> SrdBlob {
         SrdBlob {
             blob_type: blob_type.to_string(),
             data: Vec::from(data),
         }
+    }
+
+    pub fn blob_type_copy(&self) -> String {
+        self.blob_type.clone()
+    }
+
+    pub fn data_copy(&self) -> Vec<u8> {
+        self.data.clone()
+    }
+}
+
+impl SrdBlob {
+    pub fn blob_type(&self) -> &str {
+        &self.blob_type
+    }
+
+    pub fn data(&self) -> &[u8] {
+        &self.data
     }
 }
 

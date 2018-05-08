@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "wasm", feature(proc_macro, wasm_custom_section, wasm_import_module))]
 extern crate aes_frast;
 extern crate byteorder;
 extern crate digest;
@@ -7,15 +8,17 @@ extern crate rand;
 extern crate sha2;
 
 #[cfg(feature = "wasm")]
+#[macro_use]
 extern crate wasm_bindgen;
 
 pub mod srd_blob;
 mod message_types;
-mod srd;
+pub mod srd;
 mod srd_errors;
 mod dh_params;
-pub mod ffi;
 
+#[cfg(not(feature = "wasm"))]
+pub mod ffi;
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use srd::Srd;
 pub use srd_errors::SrdError;
