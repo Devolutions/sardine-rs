@@ -18,6 +18,25 @@ use dh_params::SRD_DH_PARAMS;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub struct SrdJsResult {
+    output_data: Vec<u8>,
+    res_code: i32,
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl SrdJsResult {
+    pub fn output_data(&self) -> Vec<u8> {
+        self.output_data.clone()
+    }
+
+    pub fn res_code(&self) -> i32 {
+        self.res_code
+    }
+}
+
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct Srd {
     blob: Option<SrdBlob>,
@@ -81,6 +100,29 @@ impl Srd {
         }
     }
 
+    pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
+        let mut output_data = Vec::new();
+        match self._authenticate(&input_data, &mut output_data) {
+            Err(_) => SrdJsResult {
+                output_data,
+                res_code: -1,
+            },
+            Ok(b) => {
+                if b {
+                    SrdJsResult {
+                        output_data,
+                        res_code: 0,
+                    }
+                } else {
+                    SrdJsResult {
+                        output_data,
+                        res_code: 1,
+                    }
+                }
+            }
+        }
+    }
+
     pub fn get_delegation_key(&self) -> Vec<u8> {
         self.delegation_key.to_vec()
     }
@@ -89,20 +131,12 @@ impl Srd {
         self.integrity_key.to_vec()
     }
 
-    pub fn get_raw_blob(&self) -> SrdBlob {
-        return self.blob.clone().unwrap();
-    }
-
     pub fn set_raw_blob(&mut self, blob: SrdBlob) {
         self.blob = Some(blob);
     }
 
     pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
         self.cert_data = Some(buffer);
-    }
-
-    pub fn set_key_size(&mut self, key_size: u16) {
-        self._set_key_size(key_size).expect("Invalid key size!");
     }
 }
 
@@ -139,12 +173,12 @@ impl Srd {
         })
     }
 
-    pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
-        (self.delegation_key, self.integrity_key)
+    pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
+        self._authenticate(&input_data, output_data)
     }
 
-    pub fn get_raw_blob(&self) -> Option<SrdBlob> {
-        return self.blob.clone();
+    pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
+        (self.delegation_key, self.integrity_key)
     }
 
     pub fn set_raw_blob(&mut self, blob: SrdBlob) {
@@ -155,14 +189,40 @@ impl Srd {
         self.cert_data = Some(buffer);
         Ok(())
     }
-
-    pub fn set_key_size(&mut self, key_size: u16) -> Result<()> {
-        self._set_key_size(key_size)?;
-        Ok(())
-    }
 }
 
 impl Srd {
+    pub fn _authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
+        // We don't want anybody to access previous output_data.
+        self.output_data = None;
+
+        if self.is_server {
+            match self.state {
+                0 => self.server_authenticate_0(input_data, output_data)?,
+                1 => self.server_authenticate_1(input_data, output_data)?,
+                2 => {
+                    self.server_authenticate_2(input_data)?;
+                    self.state += 1;
+                    return Ok(true);
+                }
+                _ => return Err(SrdError::BadSequence),
+            }
+        } else {
+            match self.state {
+                0 => self.client_authenticate_0(output_data)?,
+                1 => self.client_authenticate_1(input_data, output_data)?,
+                2 => {
+                    self.client_authenticate_2(input_data, output_data)?;
+                    self.state += 1;
+                    return Ok(true);
+                }
+                _ => return Err(SrdError::BadSequence),
+            }
+        }
+        self.state += 1;
+        Ok(false)
+    }
+
     pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
         if self.blob.is_some() {
             let blob = self.blob.as_ref().unwrap();
@@ -180,6 +240,10 @@ impl Srd {
         blob.write_to(&mut data)?;
         self.blob = Some(SrdBlob::new(T::blob_type(), &data));
         Ok(())
+    }
+
+    pub fn get_raw_blob(&self) -> Option<SrdBlob> {
+        return self.blob.clone();
     }
 
     fn _set_key_size(&mut self, key_size: u16) -> Result<()> {
@@ -226,43 +290,17 @@ impl Srd {
         Ok(packet)
     }
 
-    pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
-        // We don't want anybody to access previous output_data.
-        self.output_data = None;
-
-        if self.is_server {
-            match self.state {
-                0 => self.server_authenticate_0(input_data, output_data)?,
-                1 => self.server_authenticate_1(input_data, output_data)?,
-                2 => {
-                    self.server_authenticate_2(input_data)?;
-                    self.state += 1;
-                    return Ok(true);
-                }
-                _ => return Err(SrdError::BadSequence),
-            }
-        } else {
-            match self.state {
-                0 => self.client_authenticate_0(output_data)?,
-                1 => self.client_authenticate_1(input_data, output_data)?,
-                2 => {
-                    self.client_authenticate_2(input_data, output_data)?;
-                    self.state += 1;
-                    return Ok(true);
-                }
-                _ => return Err(SrdError::BadSequence),
-            }
-        }
-        self.state += 1;
-        Ok(false)
-    }
-
     pub fn get_output_data(&self) -> &Option<Vec<u8>> {
         &self.output_data
     }
 
     pub fn set_output_data(&mut self, output_data: Vec<u8>) {
         self.output_data = Some(output_data);
+    }
+
+    pub fn set_key_size(&mut self, key_size: u16) -> Result<()> {
+        self._set_key_size(key_size)?;
+        Ok(())
     }
 
     // Client initiate

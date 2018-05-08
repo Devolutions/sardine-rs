@@ -23,6 +23,9 @@ pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use srd::Srd;
 pub use srd_errors::SrdError;
 
+#[cfg(feature = "wasm")]
+pub use srd::SrdJsResult;
+
 #[cfg(test)]
 mod tests;
 
