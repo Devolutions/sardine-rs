@@ -138,12 +138,8 @@ impl Srd {
         self.integrity_key.to_vec()
     }
 
-    pub fn set_raw_blob(&mut self, blob: SrdBlob) {
-        self.blob = Some(blob);
-    }
-
     pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
-        self.cert_data = Some(buffer);
+        self._set_cert_data(buffer).unwrap();
     }
 }
 
@@ -192,26 +188,7 @@ impl Srd {
         })
     }
 
-    pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
-        self._authenticate(&input_data, output_data)
-    }
-
-    pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
-        (self.delegation_key, self.integrity_key)
-    }
-
-    pub fn set_raw_blob(&mut self, blob: SrdBlob) {
-        self.blob = Some(blob);
-    }
-
-    pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
-        self.cert_data = Some(buffer);
-        Ok(())
-    }
-}
-
-impl Srd {
-    pub fn _authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
+    fn _authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
         // We don't want anybody to access previous output_data.
         self.output_data = None;
 
@@ -242,22 +219,8 @@ impl Srd {
         Ok(false)
     }
 
-    pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
-        if self.blob.is_some() {
-            let blob = self.blob.as_ref().unwrap();
-            if blob.blob_type() == T::blob_type() {
-                let mut cursor = std::io::Cursor::new(blob.data());
-                return Ok(Some(T::read_from(&mut cursor)?));
-            }
-        }
-
-        Ok(None)
-    }
-
-    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
-        let mut data = Vec::new();
-        blob.write_to(&mut data)?;
-        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
+    fn _set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
+        self.cert_data = Some(buffer);
         Ok(())
     }
 
@@ -320,19 +283,6 @@ impl Srd {
         Ok(packet)
     }
 
-    pub fn get_output_data(&self) -> &Option<Vec<u8>> {
-        &self.output_data
-    }
-
-    pub fn set_output_data(&mut self, output_data: Vec<u8>) {
-        self.output_data = Some(output_data);
-    }
-
-    pub fn set_key_size(&mut self, key_size: u16) -> Result<()> {
-        self._set_key_size(key_size)?;
-        Ok(())
-    }
-
     // Client initiate
     fn client_authenticate_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
         let mut cipher_flags = 0u32;
@@ -356,7 +306,7 @@ impl Srd {
     fn server_authenticate_0(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
         let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
-        self._set_key_size(in_packet.key_size())?;
+        self.set_key_size(in_packet.key_size())?;
         self.find_dh_parameters()?;
 
         let key_size = in_packet.key_size();
