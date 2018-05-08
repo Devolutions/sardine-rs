@@ -7,9 +7,8 @@ extern crate num_bigint;
 extern crate rand;
 extern crate sha2;
 
-#[cfg(feature = "wasm")]
 #[macro_use]
-extern crate wasm_bindgen;
+extern crate cfg_if;
 
 pub mod srd_blob;
 mod message_types;
@@ -17,14 +16,20 @@ pub mod srd;
 mod srd_errors;
 mod dh_params;
 
-#[cfg(not(feature = "wasm"))]
-pub mod ffi;
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use srd::Srd;
 pub use srd_errors::SrdError;
 
-#[cfg(feature = "wasm")]
-pub use srd::SrdJsResult;
+cfg_if! {
+    if #[cfg(feature = "wasm")] {
+        #[macro_use]
+        extern crate wasm_bindgen;
+        pub use srd::SrdJsResult;
+    }
+    else {
+        pub mod ffi;
+    }
+}
 
 #[cfg(test)]
 mod tests;

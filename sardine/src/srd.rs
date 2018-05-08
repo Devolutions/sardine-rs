@@ -15,25 +15,99 @@ use message_types::*;
 use srd_blob::{Blob, SrdBlob};
 use dh_params::SRD_DH_PARAMS;
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
+cfg_if! {
+    if #[cfg(feature = "wasm")] {
+        use wasm_bindgen::prelude::*;
+        #[wasm_bindgen]
+        pub struct SrdJsResult {
+            output_data: Vec<u8>,
+            res_code: i32,
+        }
 
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
-pub struct SrdJsResult {
-    output_data: Vec<u8>,
-    res_code: i32,
-}
+        #[wasm_bindgen]
+        impl SrdJsResult {
+            pub fn output_data(&self) -> Vec<u8> {
+                self.output_data.clone()
+            }
 
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
-impl SrdJsResult {
-    pub fn output_data(&self) -> Vec<u8> {
-        self.output_data.clone()
+            pub fn res_code(&self) -> i32 {
+                self.res_code
+            }
+        }
+
+        // WASM public function
+        #[wasm_bindgen]
+        impl Srd {
+            pub fn new(is_server: bool) -> Srd {
+                Srd::_new(is_server).unwrap()
+            }
+
+            pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
+                let mut output_data = Vec::new();
+                match self._authenticate(&input_data, &mut output_data) {
+                    Err(_) => SrdJsResult {
+                        output_data,
+                        res_code: -1,
+                    },
+                    Ok(b) => {
+                        if b {
+                            SrdJsResult {
+                                output_data,
+                                res_code: 0,
+                            }
+                        } else {
+                            SrdJsResult {
+                                output_data,
+                                res_code: 1,
+                            }
+                        }
+                    }
+                }
+            }
+
+            pub fn get_delegation_key(&self) -> Vec<u8> {
+                self.delegation_key.to_vec()
+            }
+
+            pub fn get_integrity_key(&self) -> Vec<u8> {
+                self.integrity_key.to_vec()
+            }
+
+            pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
+                self._set_cert_data(buffer).unwrap();
+            }
+        }
     }
+    else {
+        // Native public functions
+        #[cfg(not(feature = "wasm"))]
+        impl Srd {
+            pub fn new(is_server: bool) -> Result<Srd> {
+                Ok(Srd::_new(is_server)?)
+            }
 
-    pub fn res_code(&self) -> i32 {
-        self.res_code
+            pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
+                self._authenticate(&input_data, output_data)
+            }
+
+            pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
+                (self.delegation_key, self.integrity_key)
+            }
+
+            pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
+                self._set_cert_data(buffer)?;
+                Ok(())
+            }
+
+            pub fn get_output_data(&self) -> &Option<Vec<u8>> {
+                &self.output_data
+            }
+
+            pub fn set_output_data(&mut self, output_data: Vec<u8>) {
+                self.output_data = Some(output_data);
+            }
+        }
+
     }
 }
 
@@ -64,79 +138,6 @@ pub struct Srd {
     secret_key: Vec<u8>,
 
     rng: OsRng,
-}
-
-// WASM public function
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
-impl Srd {
-    pub fn new(is_server: bool) -> Srd {
-        Srd::_new(is_server).unwrap()
-    }
-
-    pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
-        let mut output_data = Vec::new();
-        match self._authenticate(&input_data, &mut output_data) {
-            Err(_) => SrdJsResult {
-                output_data,
-                res_code: -1,
-            },
-            Ok(b) => {
-                if b {
-                    SrdJsResult {
-                        output_data,
-                        res_code: 0,
-                    }
-                } else {
-                    SrdJsResult {
-                        output_data,
-                        res_code: 1,
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn get_delegation_key(&self) -> Vec<u8> {
-        self.delegation_key.to_vec()
-    }
-
-    pub fn get_integrity_key(&self) -> Vec<u8> {
-        self.integrity_key.to_vec()
-    }
-
-    pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
-        self._set_cert_data(buffer).unwrap();
-    }
-}
-
-// Native public functions
-#[cfg(not(feature = "wasm"))]
-impl Srd {
-    pub fn new(is_server: bool) -> Result<Srd> {
-        Ok(Srd::_new(is_server)?)
-    }
-
-    pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
-        self._authenticate(&input_data, output_data)
-    }
-
-    pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
-        (self.delegation_key, self.integrity_key)
-    }
-
-    pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
-        self._set_cert_data(buffer)?;
-        Ok(())
-    }
-
-    pub fn get_output_data(&self) -> &Option<Vec<u8>> {
-        &self.output_data
-    }
-
-    pub fn set_output_data(&mut self, output_data: Vec<u8>) {
-        self.output_data = Some(output_data);
-    }
 }
 
 // Same implementation, both public
