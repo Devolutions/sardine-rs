@@ -162,7 +162,6 @@ impl Srd {
     }
 }
 
-// Private function
 impl Srd {
     pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
         if self.blob.is_some() {
