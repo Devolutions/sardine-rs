@@ -29,6 +29,9 @@ pub use cipher::Cipher;
 pub use srd::Srd;
 pub use srd_errors::SrdError;
 
+#[cfg(feature = "wasm")]
+pub use srd::SrdJsResult;
+
 #[cfg(test)]
 mod tests;
 
