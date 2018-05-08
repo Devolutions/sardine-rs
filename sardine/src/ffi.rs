@@ -96,7 +96,7 @@ pub extern "C" fn Srd_GetBlobName(srd_handle: *mut Srd, buffer: *mut u8, buffer_
     let srd = unsafe { &mut *srd_handle };
 
     if let Some(blob) = srd.get_raw_blob() {
-        let blob_type_len = blob.blob_type.len() as i32;
+        let blob_type_len = blob.blob_type().len() as i32;
         let blob_type_size = blob_type_len + 1;
 
         if buffer != std::ptr::null_mut() {
@@ -105,7 +105,7 @@ pub extern "C" fn Srd_GetBlobName(srd_handle: *mut Srd, buffer: *mut u8, buffer_
             }
 
             let buffer_data = unsafe { std::slice::from_raw_parts_mut::<u8>(buffer, buffer_size as usize) };
-            buffer_data[0..blob_type_len as usize].clone_from_slice(blob.blob_type.as_ref());
+            buffer_data[0..blob_type_len as usize].clone_from_slice(blob.blob_type().as_ref());
             buffer_data[blob_type_len as usize] = 0;
         }
 
@@ -120,7 +120,7 @@ pub extern "C" fn Srd_GetBlobData(srd_handle: *mut Srd, buffer: *mut u8, buffer_
     let srd = unsafe { &mut *srd_handle };
 
     if let Some(blob) = srd.get_raw_blob() {
-        let blob_data_len = (blob.data.len()) as i32;
+        let blob_data_len = (blob.data().len()) as i32;
 
         if buffer != std::ptr::null_mut() {
             if blob_data_len > buffer_size {
@@ -128,7 +128,7 @@ pub extern "C" fn Srd_GetBlobData(srd_handle: *mut Srd, buffer: *mut u8, buffer_
             }
 
             let buffer_data = unsafe { std::slice::from_raw_parts_mut::<u8>(buffer, buffer_size as usize) };
-            buffer_data.clone_from_slice(&blob.data);
+            buffer_data.clone_from_slice(&blob.data());
         }
 
         return blob_data_len;

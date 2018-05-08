@@ -15,6 +15,10 @@ use message_types::*;
 use srd_blob::{Blob, SrdBlob};
 use dh_params::SRD_DH_PARAMS;
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct Srd {
     blob: Option<SrdBlob>,
     output_data: Option<Vec<u8>>,
@@ -43,6 +47,67 @@ pub struct Srd {
     rng: OsRng,
 }
 
+// WASM public function
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl Srd {
+    pub fn new(is_server: bool) -> Srd {
+        Srd {
+            blob: None,
+            output_data: None,
+
+            is_server,
+            key_size: 256,
+            seq_num: 0,
+            state: 0,
+
+            messages: Vec::new(),
+
+            cert_data: None,
+
+            client_nonce: [0; 32],
+            server_nonce: [0; 32],
+            delegation_key: [0; 32],
+            integrity_key: [0; 32],
+            iv: [0; 16],
+
+            generator: BigUint::from_bytes_be(&[0]),
+
+            prime: BigUint::from_bytes_be(&[0]),
+            private_key: BigUint::from_bytes_be(&[0]),
+            secret_key: Vec::new(),
+
+            rng: OsRng::new().unwrap(),
+        }
+    }
+
+    pub fn get_delegation_key(&self) -> Vec<u8> {
+        self.delegation_key.to_vec()
+    }
+
+    pub fn get_integrity_key(&self) -> Vec<u8> {
+        self.integrity_key.to_vec()
+    }
+
+    pub fn get_raw_blob(&self) -> SrdBlob {
+        return self.blob.clone().unwrap();
+    }
+
+    pub fn set_raw_blob(&mut self, blob: SrdBlob) {
+        self.blob = Some(blob);
+    }
+
+    pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
+        self.cert_data = Some(buffer);
+    }
+
+    pub fn set_key_size(&mut self, key_size: u16) {
+        self._set_key_size(key_size).expect("Invalid key size!");
+    }
+}
+
+// Native public functions
+#[cfg(not(feature = "wasm"))]
 impl Srd {
     pub fn new(is_server: bool) -> Result<Srd> {
         Ok(Srd {
@@ -74,25 +139,6 @@ impl Srd {
         })
     }
 
-    pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
-        if self.blob.is_some() {
-            let blob = self.blob.as_ref().unwrap();
-            if blob.blob_type == T::blob_type() {
-                let mut cursor = std::io::Cursor::new(blob.data.as_slice());
-                return Ok(Some(T::read_from(&mut cursor)?));
-            }
-        }
-
-        Ok(None)
-    }
-
-    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
-        let mut data = Vec::new();
-        blob.write_to(&mut data)?;
-        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
-        Ok(())
-    }
-
     pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
         (self.delegation_key, self.integrity_key)
     }
@@ -111,6 +157,33 @@ impl Srd {
     }
 
     pub fn set_key_size(&mut self, key_size: u16) -> Result<()> {
+        self._set_key_size(key_size)?;
+        Ok(())
+    }
+}
+
+// Private function
+impl Srd {
+    pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
+        if self.blob.is_some() {
+            let blob = self.blob.as_ref().unwrap();
+            if blob.blob_type() == T::blob_type() {
+                let mut cursor = std::io::Cursor::new(blob.data());
+                return Ok(Some(T::read_from(&mut cursor)?));
+            }
+        }
+
+        Ok(None)
+    }
+
+    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
+        let mut data = Vec::new();
+        blob.write_to(&mut data)?;
+        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
+        Ok(())
+    }
+
+    fn _set_key_size(&mut self, key_size: u16) -> Result<()> {
         match key_size {
             256 | 512 | 1024 => {
                 self.key_size = key_size;
@@ -207,7 +280,7 @@ impl Srd {
     fn server_authenticate_0(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
         let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
-        self.set_key_size(in_packet.key_size())?;
+        self._set_key_size(in_packet.key_size())?;
         self.find_dh_parameters()?;
 
         let key_size = in_packet.key_size();
