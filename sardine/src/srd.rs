@@ -36,7 +36,7 @@ pub struct Srd {
     server_nonce: [u8; 32],
     delegation_key: [u8; 32],
     integrity_key: [u8; 32],
-    iv: [u8; 16],
+    iv: [u8; 32],
 
     generator: BigUint,
 
@@ -69,7 +69,7 @@ impl Srd {
             server_nonce: [0; 32],
             delegation_key: [0; 32],
             integrity_key: [0; 32],
-            iv: [0; 16],
+            iv: [0; 32],
 
             generator: BigUint::from_bytes_be(&[0]),
 
@@ -127,7 +127,7 @@ impl Srd {
             server_nonce: [0; 32],
             delegation_key: [0; 32],
             integrity_key: [0; 32],
-            iv: [0; 16],
+            iv: [0; 32],
 
             generator: BigUint::from_bytes_be(&[0]),
 
@@ -500,7 +500,7 @@ impl Srd {
         let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
         in_packet.verify_mac(&self.messages, &self.integrity_key)?;
 
-        self.blob = Some(in_packet.get_data(&self.delegation_key, &self.iv[0..16])?);
+        self.blob = Some(in_packet.get_data(&self.delegation_key, &self.iv)?);
 
         self.messages.push(Box::new(in_packet));
 
@@ -548,6 +548,6 @@ impl Srd {
         hash.input(&self.client_nonce);
         hash.input(&self.server_nonce);
 
-        self.iv.clone_from_slice(&hash.result().to_vec()[0..16]);
+        self.iv.clone_from_slice(&hash.result().to_vec());
     }
 }

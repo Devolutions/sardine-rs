@@ -1,11 +1,16 @@
 #![cfg_attr(feature = "wasm", feature(proc_macro, wasm_custom_section, wasm_import_module))]
-extern crate aes_frast;
 extern crate byteorder;
 extern crate digest;
 extern crate hmac;
 extern crate num_bigint;
 extern crate rand;
 extern crate sha2;
+
+#[cfg(not(feature = "chacha20"))]
+extern crate aes_frast;
+
+#[cfg(feature = "chacha20")]
+extern crate chacha;
 
 #[cfg(feature = "wasm")]
 #[macro_use]

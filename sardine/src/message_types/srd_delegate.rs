@@ -2,12 +2,18 @@ use std;
 use std::io::{Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
+#[cfg(not(feature = "chacha20"))]
 use aes_frast::{aes_core, aes_with_operation_mode};
+
+#[cfg(not(feature = "chacha20"))]
+use srd_errors::SrdError;
+
+#[cfg(feature = "chacha20")]
+use chacha::{ChaCha, KeyStream};
 
 use message_types::{SrdMessage, SrdPacket, srd_flags::SRD_FLAG_MAC, srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
 use srd_blob::SrdBlob;
 use Result;
-use srd_errors::SrdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdDelegate {
@@ -124,6 +130,7 @@ impl SrdDelegate {
     }
 }
 
+#[cfg(not(feature = "chacha20"))]
 fn encrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     if data.len() % 16 != 0 {
         return Err(SrdError::InvalidDataLength);
@@ -133,11 +140,12 @@ fn encrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     let mut cipher = vec![0u8; data.len()];
 
     aes_core::setkey_enc_auto(&key, &mut w_keys);
-    aes_with_operation_mode::cbc_enc(&data, &mut cipher, &w_keys, &iv);
+    aes_with_operation_mode::cbc_enc(&data, &mut cipher, &w_keys, &iv[0..16]);
 
     Ok(cipher)
 }
 
+#[cfg(not(feature = "chacha20"))]
 pub fn decrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     if data.len() % 16 != 0 {
         return Err(SrdError::InvalidDataLength);
@@ -147,9 +155,30 @@ pub fn decrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     let mut cipher = vec![0u8; data.len()];
 
     aes_core::setkey_dec_auto(&key, &mut w_keys);
-    aes_with_operation_mode::cbc_dec(&data, &mut cipher, &w_keys, &iv);
+    aes_with_operation_mode::cbc_dec(&data, &mut cipher, &w_keys, &iv[0..16]);
 
     Ok(cipher)
+}
+
+#[cfg(feature = "chacha20")]
+fn encrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+    let mut key_ref = [0u8; 32];
+    key_ref.copy_from_slice(key);
+
+    let mut iv_ref = [0u8; 24];
+    iv_ref.copy_from_slice(&iv[0..24]);
+
+    let mut stream = ChaCha::new_xchacha20(&key_ref, &iv_ref);
+    let mut buffer = data.to_vec();
+
+    stream.xor_read(&mut buffer)?;
+    Ok(buffer)
+}
+
+#[cfg(feature = "chacha20")]
+fn decrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+    // As a stream cipher, encryption and decryption works the same:
+    encrypt_data(data, key, iv)
 }
 
 //#[cfg(test)]

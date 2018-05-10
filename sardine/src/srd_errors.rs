@@ -5,11 +5,15 @@ use std::ffi::NulError;
 use std::string::FromUtf8Error;
 use hmac::crypto_mac::InvalidKeyLength;
 
+#[cfg(feature = "chacha20")]
+use chacha;
+
 #[derive(Debug)]
 pub enum SrdError {
     Io(Error),
     Ffi(NulError),
     BadSequence,
+    Crypto,
     MissingBlob,
     BlobFormatError,
     InvalidKeySize,
@@ -28,6 +32,7 @@ impl fmt::Display for SrdError {
             &SrdError::Io(ref error) => error.fmt(f),
             &SrdError::Ffi(ref _error) => write!(f, "FFI error"),
             &SrdError::BadSequence => write!(f, "Sequence error"),
+            &SrdError::Crypto => write!(f, "Cryptographic error"),
             &SrdError::MissingBlob => write!(f, "Blob error"),
             &SrdError::BlobFormatError => write!(f, "Blob format error"),
             &SrdError::InvalidKeySize => write!(f, "Key Size error"),
@@ -48,6 +53,7 @@ impl std::error::Error for SrdError {
             SrdError::Io(ref error) => error.description(),
             SrdError::Ffi(ref _error) => "There was an error while manipulating null-terminated strings",
             SrdError::BadSequence => "Unexpected packet received",
+            SrdError::Crypto => "There was a cryptographic error",
             SrdError::MissingBlob => "No blob specified",
             SrdError::BlobFormatError => "Blob format error",
             SrdError::InvalidKeySize => "Key size must be 256, 512 or 1024",
@@ -83,5 +89,12 @@ impl From<FromUtf8Error> for SrdError {
 impl From<InvalidKeyLength> for SrdError {
     fn from(_error: InvalidKeyLength) -> SrdError {
         SrdError::InvalidKeySize
+    }
+}
+
+#[cfg(feature = "chacha20")]
+impl From<chacha::Error> for SrdError {
+    fn from(_error: chacha::Error) -> SrdError {
+        SrdError::Crypto
     }
 }

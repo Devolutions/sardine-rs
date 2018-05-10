@@ -24,12 +24,15 @@ wasm-bindgen = { version = "0.2", optional = true}
 num-bigint = {version = "0.1", default_features = false}
 num-traits = {version = "0.1", default_features = false}
 num-integer = {version = "0.1", default_features = false}
-aes_frast = "0.1.2"
+chacha = {version = "0.1.0", optional = true}
+aes_frast = {version = "0.1.2", optional = true}
+
 byteorder = "1.2"
 
 libc = "0.2.40"
 
 [features]
-default = []
+default = ["aes_frast"]
 wasm = ["wasm-bindgen"]
+chacha20 = ["chacha"]
 
