@@ -12,7 +12,7 @@ authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
 
 [lib]
 name = "sardine"
-crate-type = ["staticlib", "lib", "cdylib"]
+crate-type = ["staticlib", "lib"]
 
 [dependencies]
 rand = "0.4"
