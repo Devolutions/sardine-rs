@@ -1,7 +1,7 @@
 use std;
 use std::io::Write;
 
-use rand::{OsRng, Rng};
+use rand::{OsRng, RngCore, EntropyRng};
 
 use num_bigint::BigUint;
 
@@ -40,7 +40,7 @@ cfg_if! {
         #[wasm_bindgen]
         impl Srd {
             pub fn new(is_server: bool) -> Srd {
-                Srd::_new(is_server).unwrap()
+                Srd::_new(is_server)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
@@ -83,8 +83,8 @@ cfg_if! {
         // Native public functions
         #[cfg(not(feature = "wasm"))]
         impl Srd {
-            pub fn new(is_server: bool) -> Result<Srd> {
-                Ok(Srd::_new(is_server)?)
+            pub fn new(is_server: bool) -> Srd {
+                Srd::_new(is_server)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
@@ -141,7 +141,7 @@ pub struct Srd {
     private_key: BigUint,
     secret_key: Vec<u8>,
 
-    rng: OsRng,
+    rng: EntropyRng,
 }
 
 // WASM public function
@@ -258,8 +258,8 @@ impl Srd {
             private_key: BigUint::from_bytes_be(&[0]),
             secret_key: Vec::new(),
 
-            rng: OsRng::new()?,
-        })
+            rng: EntropyRng::new(),
+        }
     }
 
     fn _authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
