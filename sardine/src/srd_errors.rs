@@ -4,6 +4,7 @@ use std::io::Error;
 use std::ffi::NulError;
 use std::string::FromUtf8Error;
 use hmac::crypto_mac::InvalidKeyLength;
+use rand;
 
 #[derive(Debug)]
 pub enum SrdError {
@@ -12,6 +13,7 @@ pub enum SrdError {
     BadSequence,
     MissingBlob,
     BlobFormatError,
+    Rng,
     InvalidKeySize,
     InvalidMac,
     InvalidCbt,
@@ -30,6 +32,7 @@ impl fmt::Display for SrdError {
             &SrdError::BadSequence => write!(f, "Sequence error"),
             &SrdError::MissingBlob => write!(f, "Blob error"),
             &SrdError::BlobFormatError => write!(f, "Blob format error"),
+            &SrdError::Rng => write!(f, "RNG error"),
             &SrdError::InvalidKeySize => write!(f, "Key Size error"),
             &SrdError::InvalidMac => write!(f, "MAC error"),
             &SrdError::InvalidCbt => write!(f, "CBT error"),
@@ -50,6 +53,7 @@ impl std::error::Error for SrdError {
             SrdError::BadSequence => "Unexpected packet received",
             SrdError::MissingBlob => "No blob specified",
             SrdError::BlobFormatError => "Blob format error",
+            SrdError::Rng => "Couldn't create RNG",
             SrdError::InvalidKeySize => "Key size must be 256, 512 or 1024",
             SrdError::InvalidMac => "Message authentication code is invalid",
             SrdError::InvalidCbt => "Channel binding token is invalid",
@@ -83,5 +87,11 @@ impl From<FromUtf8Error> for SrdError {
 impl From<InvalidKeyLength> for SrdError {
     fn from(_error: InvalidKeyLength) -> SrdError {
         SrdError::InvalidKeySize
+    }
+}
+
+impl From<rand::Error> for SrdError {
+    fn from(_error: rand::Error) -> SrdError {
+        SrdError::Rng
     }
 }

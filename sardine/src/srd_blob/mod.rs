@@ -3,7 +3,7 @@ use std::io::Read;
 use std::io::Write;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use rand::{OsRng, Rng};
+use rand::{OsRng, RngCore};
 use Result;
 use message_types::SrdMessage;
 
