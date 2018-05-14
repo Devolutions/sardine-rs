@@ -1,14 +1,13 @@
 #[cfg(feature = "fips")]
 use aes_frast::{aes_core, aes_with_operation_mode};
 
-#[cfg(feature = "fips")]
 use srd_errors::SrdError;
 
 use chacha::{ChaCha, KeyStream};
 
 use Result;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Cipher {
     AES256,
     ChaCha20,
@@ -30,6 +29,41 @@ impl Cipher {
             &Cipher::ChaCha20 => encrypt_data_chacha(data, key, iv),
             &Cipher::XChaCha20 => encrypt_data_xchacha(data, key, iv),
         }
+    }
+
+    pub fn flag(&self) -> u32 {
+        match self {
+            &Cipher::AES256 => 0x00000001,
+            &Cipher::ChaCha20 => 0x00000100,
+            &Cipher::XChaCha20 => 0x00000200,
+        }
+    }
+
+    pub fn from_flags(flags: u32) -> Vec<Self> {
+        let mut ciphers = Vec::new();
+        if flags & 0x00000001 != 0 {
+            ciphers.push(Cipher::AES256)
+        };
+        if flags & 0x00000100 != 0 {
+            ciphers.push(Cipher::ChaCha20)
+        };
+        if flags & 0x00000200 != 0 {
+            ciphers.push(Cipher::XChaCha20)
+        };
+        ciphers
+    }
+
+    pub fn best_cipher(ciphers: &[Cipher]) -> Result<Cipher> {
+        if ciphers.contains(&Cipher::XChaCha20) {
+            return Ok(Cipher::XChaCha20);
+        };
+        if ciphers.contains(&Cipher::ChaCha20) {
+            return Ok(Cipher::ChaCha20);
+        };
+        if ciphers.contains(&Cipher::AES256) {
+            return Ok(Cipher::AES256);
+        };
+        Err(SrdError::Cipher)
     }
 }
 

@@ -13,6 +13,7 @@ pub struct SrdAccept {
     packet_type: u8,
     seq_num: u8,
     flags: u16,
+    pub cipher: u32,
     key_size: u16,
     reserved: u16,
     pub public_key: Vec<u8>,
@@ -30,6 +31,7 @@ impl SrdMessage for SrdAccept {
         let packet_type = buffer.read_u8()?;
         let seq_num = buffer.read_u8()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
+        let cipher = buffer.read_u32::<LittleEndian>()?;
         let key_size = buffer.read_u16::<LittleEndian>()?;
         let reserved = buffer.read_u16::<LittleEndian>()?;
 
@@ -49,6 +51,7 @@ impl SrdMessage for SrdAccept {
             packet_type,
             seq_num,
             flags,
+            cipher,
             key_size,
             reserved,
             public_key,
@@ -83,6 +86,7 @@ impl SrdPacket for SrdAccept {
         buffer.write_u8(self.packet_type)?;
         buffer.write_u8(self.seq_num)?;
         buffer.write_u16::<LittleEndian>(self.flags)?;
+        buffer.write_u32::<LittleEndian>(self.cipher)?;
         buffer.write_u16::<LittleEndian>(self.key_size)?;
         buffer.write_u16::<LittleEndian>(self.reserved)?;
         buffer.write_all(&self.public_key)?;
@@ -104,6 +108,7 @@ impl SrdPacket for SrdAccept {
 impl SrdAccept {
     pub fn new(
         seq_num: u8,
+        cipher: u32,
         key_size: u16,
         mut public_key: Vec<u8>,
         nonce: [u8; 32],
@@ -128,6 +133,7 @@ impl SrdAccept {
             packet_type: SRD_ACCEPT_MSG_ID,
             seq_num,
             flags,
+            cipher,
             reserved: 0,
             key_size,
             public_key,
@@ -154,6 +160,7 @@ mod test {
     fn accept_encoding() {
         let msg = SrdAccept::new(
             2,
+            0,
             256,
             vec![0u8; 256],
             [0u8; 32],

@@ -65,7 +65,7 @@ impl Srd {
             seq_num: 0,
             state: 0,
 
-            messages: Vec::new(),
+            messages: vec![Cipher::XChaCha20, Cipher::ChaCha20],
 
             cert_data: None,
 
@@ -136,7 +136,7 @@ impl Srd {
             integrity_key: [0; 32],
             iv: [0; 32],
 
-            supported_ciphers: Vec::new(),
+            supported_ciphers: vec![Cipher::XChaCha20, Cipher::ChaCha20],
             cipher: Cipher::XChaCha20,
 
             generator: BigUint::from_bytes_be(&[0]),
@@ -281,8 +281,17 @@ impl Srd {
 
     // Client initiate
     fn client_authenticate_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
+        let mut cipher_flags = 0u32;
+        for c in &self.supported_ciphers {
+            cipher_flags |= c.flag();
+        }
+
+        if cipher_flags == 0 {
+            return Err(SrdError::Cipher);
+        }
+
         // Negotiate
-        let out_packet = SrdInitiate::new(self.seq_num, self.key_size);
+        let out_packet = SrdInitiate::new(self.seq_num, cipher_flags, self.key_size);
         self.write_msg(&out_packet, &mut output_data)?;
 
         self.messages.push(Box::new(out_packet));
@@ -309,8 +318,18 @@ impl Srd {
 
         self.rng.fill_bytes(&mut self.server_nonce);
 
+        let mut cipher_flags = 0u32;
+        for c in &self.supported_ciphers {
+            cipher_flags |= c.flag();
+        }
+
+        if cipher_flags == 0 {
+            return Err(SrdError::Cipher);
+        }
+
         let out_packet = SrdOffer::new(
             self.seq_num,
+            cipher_flags,
             key_size,
             self.generator.to_bytes_be(),
             self.prime.to_bytes_be(),
@@ -329,6 +348,8 @@ impl Srd {
     fn client_authenticate_1(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         //Challenge
         let in_packet = self.read_msg::<SrdOffer>(input_data)?;
+
+        let server_ciphers = Cipher::from_flags(in_packet.ciphers);
 
         self.generator = BigUint::from_bytes_be(&in_packet.generator);
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
@@ -369,8 +390,19 @@ impl Srd {
             }
         }
 
+        // Accept
+        let mut common_ciphers = Vec::new();
+        for c in &server_ciphers {
+            if self.supported_ciphers.contains(c) {
+                common_ciphers.push(*c);
+            }
+        }
+
+        self.cipher = Cipher::best_cipher(&common_ciphers)?;
+
         let out_packet = SrdAccept::new(
             self.seq_num,
+            self.cipher.flag(),
             key_size,
             public_key.to_bytes_be(),
             self.client_nonce,
@@ -390,6 +422,19 @@ impl Srd {
     fn server_authenticate_1(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Response
         let in_packet = self.read_msg::<SrdAccept>(input_data)?;
+
+        let chosen_cipher = Cipher::from_flags(in_packet.cipher);
+
+        if chosen_cipher.len() != 1 {
+            return Err(SrdError::Cipher);
+        }
+
+        self.cipher = *chosen_cipher.get(0).unwrap_or(&Cipher::XChaCha20);
+
+        if !self.supported_ciphers.contains(&self.cipher) {
+            return Err(SrdError::Cipher);
+        }
+
         self.client_nonce = in_packet.nonce;
 
         self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)

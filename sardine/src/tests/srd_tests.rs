@@ -1,3 +1,4 @@
+use cipher::Cipher;
 use srd::Srd;
 use srd_blob::BasicBlob;
 
@@ -60,6 +61,17 @@ fn good_login() {
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();
+
+    let mut client_ciphers = Vec::new();
+    client_ciphers.push(Cipher::ChaCha20);
+    client_ciphers.push(Cipher::XChaCha20);
+
+    let mut server_ciphers = Vec::new();
+    server_ciphers.push(Cipher::ChaCha20);
+    server_ciphers.push(Cipher::XChaCha20);
+
+    client.set_ciphers(client_ciphers);
+    server.set_ciphers(server_ciphers);
 
     // Commenting out those two lines should work without cbt verification
     client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();

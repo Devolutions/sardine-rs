@@ -11,6 +11,7 @@ pub struct SrdOffer {
     packet_type: u8,
     seq_num: u8,
     flags: u16,
+    pub ciphers: u32,
     key_size: u16,
     pub generator: Vec<u8>,
     pub prime: Vec<u8>,
@@ -27,6 +28,7 @@ impl SrdMessage for SrdOffer {
         let packet_type = buffer.read_u8()?;
         let seq_num = buffer.read_u8()?;
         let flags = buffer.read_u16::<LittleEndian>()?;
+        let ciphers = buffer.read_u32::<LittleEndian>()?;
         let key_size = buffer.read_u16::<LittleEndian>()?;
 
         let mut generator = vec![0u8; 2];
@@ -44,6 +46,7 @@ impl SrdMessage for SrdOffer {
             packet_type,
             seq_num,
             flags,
+            ciphers,
             key_size,
             generator,
             prime,
@@ -57,6 +60,7 @@ impl SrdMessage for SrdOffer {
         buffer.write_u8(self.packet_type)?;
         buffer.write_u8(self.seq_num)?;
         buffer.write_u16::<LittleEndian>(self.flags)?;
+        buffer.write_u32::<LittleEndian>(self.ciphers)?;
         buffer.write_u16::<LittleEndian>(self.key_size)?;
         buffer.write_all(&self.generator)?;
         buffer.write_all(&self.prime)?;
@@ -84,6 +88,7 @@ impl SrdPacket for SrdOffer {
 impl SrdOffer {
     pub fn new(
         seq_num: u8,
+        ciphers: u32,
         key_size: u16,
         mut generator: Vec<u8>,
         mut prime: Vec<u8>,
@@ -99,6 +104,7 @@ impl SrdOffer {
             packet_type: SRD_OFFER_MSG_ID,
             seq_num,
             flags: 0,
+            ciphers,
             key_size,
             generator,
             prime,
@@ -119,7 +125,7 @@ mod test {
 
     #[test]
     fn offer_encoding() {
-        let msg = SrdOffer::new(1, 256, vec![0, 0], vec![0u8; 256], vec![0u8; 256], [0u8; 32]);
+        let msg = SrdOffer::new(1, 0, 256, vec![0, 0], vec![0u8; 256], vec![0u8; 256], [0u8; 32]);
         assert_eq!(msg.id(), SRD_OFFER_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();

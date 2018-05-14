@@ -10,6 +10,7 @@ pub struct SrdInitiate {
     packet_type: u8,
     seq_num: u8,
     flags: u16,
+    ciphers: u32,
     key_size: u16,
     reserved: u16,
 }
@@ -24,6 +25,7 @@ impl SrdMessage for SrdInitiate {
             packet_type: buffer.read_u8()?,
             seq_num: buffer.read_u8()?,
             flags: buffer.read_u16::<LittleEndian>()?,
+            ciphers: buffer.read_u32::<LittleEndian>()?,
             key_size: buffer.read_u16::<LittleEndian>()?,
             reserved: buffer.read_u16::<LittleEndian>()?,
         })
@@ -34,6 +36,7 @@ impl SrdMessage for SrdInitiate {
         buffer.write_u8(self.packet_type)?;
         buffer.write_u8(self.seq_num)?;
         buffer.write_u16::<LittleEndian>(self.flags)?;
+        buffer.write_u32::<LittleEndian>(self.ciphers)?;
         buffer.write_u16::<LittleEndian>(self.key_size)?;
         buffer.write_u16::<LittleEndian>(self.reserved)?;
         Ok(())
@@ -55,12 +58,13 @@ impl SrdPacket for SrdInitiate {
 }
 
 impl SrdInitiate {
-    pub fn new(seq_num: u8, key_size: u16) -> SrdInitiate {
+    pub fn new(seq_num: u8, ciphers: u32, key_size: u16) -> SrdInitiate {
         SrdInitiate {
             signature: SRD_SIGNATURE,
             packet_type: SRD_INITIATE_MSG_ID,
             seq_num,
             flags: 0,
+            ciphers,
             key_size,
             reserved: 0,
         }
@@ -78,7 +82,7 @@ mod test {
 
     #[test]
     fn initiate_encoding() {
-        let msg = SrdInitiate::new(0, 2);
+        let msg = SrdInitiate::new(0, 0, 2);
         assert_eq!(msg.id(), SRD_INITIATE_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();
