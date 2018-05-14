@@ -45,7 +45,12 @@ cfg_if! {
 
             pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
                 let mut output_data = Vec::new();
-                match self._authenticate(&input_data, &mut output_data) {
+                self._authenticate(&input_data, &mut output_data).unwrap();
+                SrdJsResult {
+                    output_data,
+                    res_code: -1,
+                }
+                /*match self._authenticate(&input_data, &mut output_data) {
                     Err(_) => SrdJsResult {
                         output_data,
                         res_code: -1,
@@ -63,7 +68,7 @@ cfg_if! {
                             }
                         }
                     }
-                }
+                }*/
             }
 
             pub fn get_delegation_key(&self) -> Vec<u8> {
@@ -309,7 +314,6 @@ impl Srd {
         // Challenge
         if cfg!(feature = "wasm") {
             private_key_bytes = getrandom(private_key_bytes);
-            alert("Test")
         }
         else {
             self.rng.try_fill_bytes(&mut private_key_bytes)?;
@@ -322,7 +326,6 @@ impl Srd {
         if cfg!(feature = "wasm") {
             let server_nonce = getrandom(self.server_nonce.to_vec());
             self.server_nonce.clone_from_slice(&server_nonce);
-            alert("Test")
         }
         else {
             self.rng.try_fill_bytes(&mut self.server_nonce)?;
@@ -355,7 +358,6 @@ impl Srd {
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
         if cfg!(feature = "wasm") {
             private_key_bytes = getrandom(private_key_bytes);
-            alert("Test")
         }
         else {
             self.rng.try_fill_bytes(&mut private_key_bytes)?;
@@ -368,7 +370,6 @@ impl Srd {
         if cfg!(feature = "wasm") {
             let server_nonce = getrandom(self.server_nonce.to_vec());
             self.server_nonce.clone_from_slice(&server_nonce);
-            alert("Test")
         }
         else {
             self.rng.try_fill_bytes(&mut self.server_nonce)?;
@@ -601,6 +602,5 @@ impl Srd {
 #[cfg(feature="wasm")]
 #[wasm_bindgen]
 extern {
-    fn alert(s: &str);
     fn getrandom(v: Vec<u8>) -> Vec<u8>;
 }

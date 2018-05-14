@@ -17,10 +17,6 @@ crate-type = ["staticlib", "lib", "cdylib"]
 [dependencies]
 cfg-if = "0.1"
 rand = {git = "https://github.com/rust-lang-nursery/rand"}
-<<<<<<< HEAD
-=======
-#rand = "0.5.0-pre.1"
->>>>>>> 4fc367cb752254c04ffb843ed2535f504ecdd265
 hmac = "0.6"
 sha2 = "0.7"
 digest = "0.7"
