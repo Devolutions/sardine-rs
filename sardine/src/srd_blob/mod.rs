@@ -5,7 +5,8 @@ use std::io::Write;
 
 use Result;
 use message_types::SrdMessage;
-use rand::{OsRng, RngCore};
+use srd::getrandom;
+use rand::{EntropyRng, RngCore};
 
 mod basic_blob;
 mod logon_blob;
@@ -77,7 +78,7 @@ impl SrdMessage for SrdBlob {
     }
 
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
-        let mut rng = OsRng::new()?;
+        let mut rng = EntropyRng::new();
 
         let type_size = self.blob_type.len() + 1;
         let type_padding = 16 - (type_size + 8) % 16;
@@ -93,13 +94,21 @@ impl SrdMessage for SrdBlob {
         buffer.write_u8(0u8)?;
 
         let mut padding = vec![0u8; type_padding];
-        rng.fill_bytes(&mut padding);
+        if cfg!(feature = "wasm") {
+            padding = getrandom(padding);
+        } else {
+            rng.try_fill_bytes(&mut padding)?;
+        }
         buffer.write_all(&padding)?;
 
         buffer.write_all(&self.data)?;
 
         let mut padding = vec![0u8; data_padding];
-        rng.fill_bytes(&mut padding);
+        if cfg!(feature = "wasm") {
+            padding = getrandom(padding);
+        } else {
+            rng.try_fill_bytes(&mut padding)?;
+        }
         buffer.write_all(&padding)?;
 
         Ok(())
