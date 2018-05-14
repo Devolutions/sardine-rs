@@ -8,12 +8,7 @@ use srd_blob::SrdBlob;
 
 #[no_mangle]
 pub extern "C" fn Srd_New(is_server: bool) -> *mut Srd {
-    match Srd::new(is_server) {
-        Ok(srd_new) => Box::into_raw(Box::new(srd_new)) as *mut Srd,
-        Err(_) => {
-            return std::ptr::null_mut();
-        }
-    }
+    Box::into_raw(Box::new(Srd::new(is_server))) as *mut Srd
 }
 
 #[no_mangle]

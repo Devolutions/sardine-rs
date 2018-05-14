@@ -9,8 +9,8 @@ use uuid::Uuid;
 mod srd_scheme;
 mod www_authenticate;
 
-pub use www_authenticate::WWWAuthenticate;
-pub use www_authenticate::AuthenticateScheme;
 pub use srd_scheme::SrdAuthorizationScheme;
+pub use www_authenticate::AuthenticateScheme;
+pub use www_authenticate::WWWAuthenticate;
 
 header! { (AuthId, "Auth-ID") => [Uuid] }

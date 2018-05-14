@@ -1,7 +1,7 @@
 use std;
 use std::io::Write;
 
-use rand::{OsRng, RngCore, EntropyRng};
+use rand::{EntropyRng, RngCore};
 
 use num_bigint::BigUint;
 
@@ -10,10 +10,10 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
 use Result;
-use srd_errors::SrdError;
+use dh_params::SRD_DH_PARAMS;
 use message_types::*;
 use srd_blob::{Blob, SrdBlob};
-use dh_params::SRD_DH_PARAMS;
+use srd_errors::SrdError;
 
 cfg_if! {
     if #[cfg(feature = "wasm")] {
@@ -305,12 +305,12 @@ impl Srd {
 
         // Challenge
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        self.rng.fill_bytes(&mut private_key_bytes);
+        self.rng.try_fill_bytes(&mut private_key_bytes)?;
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        self.rng.fill_bytes(&mut self.server_nonce);
+        self.rng.try_fill_bytes(&mut self.server_nonce)?;
 
         let out_packet = SrdOffer::new(
             self.seq_num,
@@ -337,12 +337,12 @@ impl Srd {
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
 
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        self.rng.fill_bytes(&mut private_key_bytes);
+        self.rng.try_fill_bytes(&mut private_key_bytes)?;
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        self.rng.fill_bytes(&mut self.client_nonce);
+        self.rng.try_fill_bytes(&mut self.client_nonce)?;
 
         self.server_nonce = in_packet.nonce;
         self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
@@ -551,8 +551,7 @@ impl Srd {
         hash.input(&self.secret_key);
         hash.input(&self.server_nonce);
 
-        self.delegation_key
-            .clone_from_slice(&hash.result().to_vec());
+        self.delegation_key.clone_from_slice(&hash.result().to_vec());
 
         hash = Sha256::new();
         hash.input(&self.server_nonce);

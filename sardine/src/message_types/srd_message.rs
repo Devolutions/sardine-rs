@@ -1,5 +1,5 @@
-use std;
 use Result;
+use std;
 
 pub trait SrdMessage {
     fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>

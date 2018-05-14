@@ -1,8 +1,8 @@
-use std::fmt;
-use std::str;
+use base64;
 use hyper;
 use hyper::header;
-use base64;
+use std::fmt;
+use std::str;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum AuthenticateScheme {

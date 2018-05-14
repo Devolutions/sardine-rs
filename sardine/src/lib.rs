@@ -10,11 +10,11 @@ extern crate sha2;
 #[macro_use]
 extern crate cfg_if;
 
-pub mod srd_blob;
+mod dh_params;
 mod message_types;
 pub mod srd;
+pub mod srd_blob;
 mod srd_errors;
-mod dh_params;
 
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use srd::Srd;

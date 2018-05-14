@@ -1,12 +1,12 @@
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std;
 use std::io::{Read, Write};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use aes_frast::{aes_core, aes_with_operation_mode};
 
+use Result;
 use message_types::{SrdMessage, SrdPacket, srd_flags::SRD_FLAG_MAC, srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
 use srd_blob::SrdBlob;
-use Result;
 use srd_errors::SrdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]

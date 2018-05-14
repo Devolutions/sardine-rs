@@ -1,7 +1,7 @@
-use std::fmt;
+use base64::{decode, encode};
 use hyper;
 use hyper::header::Scheme;
-use base64::{decode, encode};
+use std::fmt;
 use std::str::FromStr;
 
 #[derive(Clone, PartialEq, Debug)]

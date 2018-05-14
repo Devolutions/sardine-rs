@@ -1,10 +1,10 @@
-use std;
-use std::fmt;
-use std::io::Error;
-use std::ffi::NulError;
-use std::string::FromUtf8Error;
 use hmac::crypto_mac::InvalidKeyLength;
 use rand;
+use std;
+use std::ffi::NulError;
+use std::fmt;
+use std::io::Error;
+use std::string::FromUtf8Error;
 
 #[derive(Debug)]
 pub enum SrdError {
