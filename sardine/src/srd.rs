@@ -39,6 +39,7 @@ cfg_if! {
         // WASM public function
         #[wasm_bindgen]
         impl Srd {
+            #[wasm_bindgen(constructor)]
             pub fn new(is_server: bool) -> Srd {
                 Srd::_new(is_server)
             }
@@ -387,14 +388,29 @@ impl Srd {
 
         self.messages.push(Box::new(in_packet));
 
-        // Challenge
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        self.rng.try_fill_bytes(&mut private_key_bytes)?;
+
+        // Challenge
+        if cfg!(feature = "wasm") {
+            private_key_bytes = getrandom(private_key_bytes);
+            alert("Test")
+        }
+        else {
+            self.rng.try_fill_bytes(&mut private_key_bytes)?;
+        }
+
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        self.rng.try_fill_bytes(&mut self.server_nonce)?;
+        if cfg!(feature = "wasm") {
+            let server_nonce = getrandom(self.server_nonce.to_vec());
+            self.server_nonce.clone_from_slice(&server_nonce);
+            alert("Test")
+        }
+        else {
+            self.rng.try_fill_bytes(&mut self.server_nonce)?;
+        }
 
         let mut cipher_flags = 0u32;
         for c in &self.supported_ciphers {
@@ -433,12 +449,26 @@ impl Srd {
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
 
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        self.rng.try_fill_bytes(&mut private_key_bytes)?;
+        if cfg!(feature = "wasm") {
+            private_key_bytes = getrandom(private_key_bytes);
+            alert("Test")
+        }
+        else {
+            self.rng.try_fill_bytes(&mut private_key_bytes)?;
+        }
+
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
-
-        self.rng.try_fill_bytes(&mut self.client_nonce)?;
+        
+        if cfg!(feature = "wasm") {
+            let server_nonce = getrandom(self.server_nonce.to_vec());
+            self.server_nonce.clone_from_slice(&server_nonce);
+            alert("Test")
+        }
+        else {
+            self.rng.try_fill_bytes(&mut self.server_nonce)?;
+        }
 
         self.server_nonce = in_packet.nonce;
         self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
@@ -687,4 +717,11 @@ impl Srd {
 
         self.iv.clone_from_slice(&hash.result().to_vec());
     }
+}
+
+#[cfg(feature="wasm")]
+#[wasm_bindgen]
+extern {
+    fn alert(s: &str);
+    fn getrandom(v: Vec<u8>) -> Vec<u8>;
 }
