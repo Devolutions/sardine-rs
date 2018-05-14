@@ -5,7 +5,7 @@ use std::io::Write;
 
 use Result;
 use message_types::SrdMessage;
-use rand::{OsRng, Rng};
+use rand::{OsRng, RngCore};
 
 mod basic_blob;
 mod logon_blob;

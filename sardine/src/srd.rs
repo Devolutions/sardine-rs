@@ -1,7 +1,7 @@
 use std;
 use std::io::Write;
 
-use rand::{OsRng, RngCore, EntropyRng};
+use rand::{EntropyRng, RngCore};
 
 use num_bigint::BigUint;
 
@@ -389,12 +389,12 @@ impl Srd {
 
         // Challenge
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        self.rng.fill_bytes(&mut private_key_bytes);
+        self.rng.try_fill_bytes(&mut private_key_bytes)?;
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        self.rng.fill_bytes(&mut self.server_nonce);
+        self.rng.try_fill_bytes(&mut self.server_nonce)?;
 
         let mut cipher_flags = 0u32;
         for c in &self.supported_ciphers {
@@ -433,12 +433,12 @@ impl Srd {
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
 
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        self.rng.fill_bytes(&mut private_key_bytes);
+        self.rng.try_fill_bytes(&mut private_key_bytes)?;
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        self.rng.fill_bytes(&mut self.client_nonce);
+        self.rng.try_fill_bytes(&mut self.client_nonce)?;
 
         self.server_nonce = in_packet.nonce;
         self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
