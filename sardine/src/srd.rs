@@ -46,7 +46,12 @@ cfg_if! {
 
             pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
                 let mut output_data = Vec::new();
-                match self._authenticate(&input_data, &mut output_data) {
+                self._authenticate(&input_data, &mut output_data).unwrap();
+                SrdJsResult {
+                    output_data,
+                    res_code: -1,
+                }
+                /*match self._authenticate(&input_data, &mut output_data) {
                     Err(_) => SrdJsResult {
                         output_data,
                         res_code: -1,
@@ -64,7 +69,7 @@ cfg_if! {
                             }
                         }
                     }
-                }
+                }*/
             }
 
             pub fn get_delegation_key(&self) -> Vec<u8> {
