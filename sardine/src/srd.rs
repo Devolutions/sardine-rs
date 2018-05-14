@@ -1,6 +1,7 @@
 use std;
 use std::io::Write;
 
+#[cfg(not(feature = "wasm"))]
 use rand::{EntropyRng, RngCore};
 
 use num_bigint::BigUint;
@@ -142,8 +143,6 @@ pub struct Srd {
     prime: BigUint,
     private_key: BigUint,
     secret_key: Vec<u8>,
-
-    rng: EntropyRng,
 }
 
 // Same implementation, both public
@@ -213,8 +212,6 @@ impl Srd {
             prime: BigUint::from_bytes_be(&[0]),
             private_key: BigUint::from_bytes_be(&[0]),
             secret_key: Vec::new(),
-
-            rng: EntropyRng::new(),
         }
     }
 
@@ -311,24 +308,13 @@ impl Srd {
 
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
 
+        fill_random(&mut private_key_bytes)?;
         // Challenge
-        if cfg!(feature = "wasm") {
-            private_key_bytes = getrandom(private_key_bytes);
-        }
-        else {
-            self.rng.try_fill_bytes(&mut private_key_bytes)?;
-        }
-
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        if cfg!(feature = "wasm") {
-            let server_nonce = getrandom(self.server_nonce.to_vec());
-            self.server_nonce.clone_from_slice(&server_nonce);
-        } else {
-            self.rng.try_fill_bytes(&mut self.server_nonce)?;
-        }
+        fill_random(&mut self.server_nonce)?;
 
         let out_packet = SrdOffer::new(
             self.seq_num,
@@ -355,22 +341,14 @@ impl Srd {
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
 
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        if cfg!(feature = "wasm") {
-            private_key_bytes = getrandom(private_key_bytes);
-        }else {
-            self.rng.try_fill_bytes(&mut private_key_bytes)?;
-        }
+
+        fill_random(&mut private_key_bytes)?;
 
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        if cfg!(feature = "wasm") {
-            let server_nonce = getrandom(self.server_nonce.to_vec());
-            self.server_nonce.clone_from_slice(&server_nonce);
-        } else {
-            self.rng.try_fill_bytes(&mut self.server_nonce)?;
-        }
+        fill_random(&mut self.server_nonce)?;
 
         self.server_nonce = in_packet.nonce;
         self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
@@ -597,11 +575,21 @@ impl Srd {
 }
 
 #[cfg(feature = "wasm")]
-#[wasm_bindgen]
-extern {
-    // For WebAssembly, you must bind your own rng or else it will fail. This will eventually be done automatically by the rand crate.
-    pub fn getrandom(v: Vec<u8>) -> Vec<u8>;
+pub fn fill_random(data: &mut [u8]) -> Result<()> {
+    let mut new_data = getrandom(data.to_vec());
+    new_data.write(data)?;
+    Ok(())
 }
 
 #[cfg(not(feature = "wasm"))]
-pub fn getrandom(_: Vec<u8>) -> Vec<u8> { unreachable!() }
+pub fn fill_random(data: &mut [u8]) -> Result<()> {
+    EntropyRng::new().try_fill_bytes(data)?;
+    Ok(())
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+extern "C" {
+    // For WebAssembly, you must bind your own rng or else it will fail. This will eventually be done automatically by the rand crate.
+    fn getrandom(v: Vec<u8>) -> Vec<u8>;
+}
