@@ -1,4 +1,4 @@
-#[cfg(feature = "fips")]
+#[cfg(feature = "aes")]
 use aes_frast::{aes_core, aes_with_operation_mode};
 
 use srd_errors::SrdError;
@@ -71,7 +71,7 @@ impl Cipher {
     }
 }
 
-#[cfg(feature = "fips")]
+#[cfg(feature = "aes")]
 fn encrypt_data_aes(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     if data.len() % 16 != 0 {
         return Err(SrdError::InvalidDataLength);
@@ -86,7 +86,7 @@ fn encrypt_data_aes(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     Ok(cipher)
 }
 
-#[cfg(feature = "fips")]
+#[cfg(feature = "aes")]
 fn decrypt_data_aes(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     if data.len() % 16 != 0 {
         return Err(SrdError::InvalidDataLength);
@@ -101,12 +101,12 @@ fn decrypt_data_aes(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     Ok(cipher)
 }
 
-#[cfg(not(feature = "fips"))]
+#[cfg(not(feature = "aes"))]
 fn encrypt_data_aes(_: &[u8], _: &[u8], _: &[u8]) -> Result<Vec<u8>> {
     unreachable!();
 }
 
-#[cfg(not(feature = "fips"))]
+#[cfg(not(feature = "aes"))]
 fn decrypt_data_aes(_: &[u8], _: &[u8], _: &[u8]) -> Result<Vec<u8>> {
     unreachable!();
 }

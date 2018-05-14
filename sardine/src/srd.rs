@@ -120,6 +120,8 @@ impl Srd {
         let supported_ciphers;
         if cfg!(feature = "fips") {
             supported_ciphers = vec![Cipher::AES256];
+        } else if cfg!(feature = "aes") {
+            supported_ciphers = vec![Cipher::XChaCha20, Cipher::ChaCha20, Cipher::AES256];
         } else {
             supported_ciphers = vec![Cipher::XChaCha20, Cipher::ChaCha20];
         }
@@ -200,7 +202,11 @@ impl Srd {
     }
 
     pub fn set_ciphers(&mut self, ciphers: Vec<Cipher>) -> Result<()> {
-        if cfg!(not(feature = "fips")) {
+        if cfg!(feature = "fips") {
+            return Err(SrdError::Cipher);
+        }
+
+        if cfg!(not(feature = "aes")) {
             if ciphers.contains(&Cipher::AES256) {
                 return Err(SrdError::Cipher);
             }

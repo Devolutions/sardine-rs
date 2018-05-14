@@ -6,7 +6,7 @@ extern crate num_bigint;
 extern crate rand;
 extern crate sha2;
 
-#[cfg(feature = "fips")]
+#[cfg(feature = "aes")]
 extern crate aes_frast;
 
 extern crate chacha;

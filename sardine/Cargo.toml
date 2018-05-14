@@ -34,5 +34,6 @@ libc = "0.2.40"
 [features]
 default = []
 wasm = ["wasm-bindgen"]
-fips = ["aes_frast"]
+aes = ["aes_frast"]
+fips = ["aes"]
 
