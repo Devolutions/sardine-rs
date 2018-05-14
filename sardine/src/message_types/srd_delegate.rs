@@ -110,6 +110,8 @@ impl SrdDelegate {
             mac: [0u8; 32],
         };
 
+        alert("001");
+
         response.compute_mac(&previous_messages, &integrity_key)?;
         Ok(response)
     }
