@@ -6,21 +6,21 @@ extern crate num_bigint;
 extern crate rand;
 extern crate sha2;
 
-#[cfg(not(feature = "chacha20"))]
+#[cfg(feature = "fips")]
 extern crate aes_frast;
 
-#[cfg(feature = "chacha20")]
 extern crate chacha;
 
 #[cfg(feature = "wasm")]
 #[macro_use]
 extern crate wasm_bindgen;
 
-pub mod srd_blob;
+mod cipher;
+mod dh_params;
 mod message_types;
 pub mod srd;
+pub mod srd_blob;
 mod srd_errors;
-mod dh_params;
 
 #[cfg(not(feature = "wasm"))]
 pub mod ffi;

@@ -3,9 +3,9 @@ use std::io::Read;
 use std::io::Write;
 
 use Result;
-use srd_errors::SrdError;
-use srd_blob::Blob;
 use message_types::SrdMessage;
+use srd_blob::Blob;
+use srd_errors::SrdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BasicBlob {

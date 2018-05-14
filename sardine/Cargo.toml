@@ -19,12 +19,12 @@ rand = "0.4"
 hmac = "0.6"
 sha2 = "0.7"
 digest = "0.7"
+chacha = "0.1.0"
 wasm-bindgen = { version = "0.2", optional = true}
 
 num-bigint = {version = "0.1", default_features = false}
 num-traits = {version = "0.1", default_features = false}
 num-integer = {version = "0.1", default_features = false}
-chacha = {version = "0.1.0", optional = true}
 aes_frast = {version = "0.1.2", optional = true}
 
 byteorder = "1.2"
@@ -32,7 +32,7 @@ byteorder = "1.2"
 libc = "0.2.40"
 
 [features]
-default = ["aes_frast"]
+default = []
 wasm = ["wasm-bindgen"]
-chacha20 = ["chacha"]
+fips = ["aes_frast"]
 

@@ -1,11 +1,10 @@
+use hmac::crypto_mac::InvalidKeyLength;
 use std;
+use std::ffi::NulError;
 use std::fmt;
 use std::io::Error;
-use std::ffi::NulError;
 use std::string::FromUtf8Error;
-use hmac::crypto_mac::InvalidKeyLength;
 
-#[cfg(feature = "chacha20")]
 use chacha;
 
 #[derive(Debug)]
@@ -92,7 +91,6 @@ impl From<InvalidKeyLength> for SrdError {
     }
 }
 
-#[cfg(feature = "chacha20")]
 impl From<chacha::Error> for SrdError {
     fn from(_error: chacha::Error) -> SrdError {
         SrdError::Crypto

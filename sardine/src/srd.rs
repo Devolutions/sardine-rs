@@ -10,10 +10,11 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
 use Result;
-use srd_errors::SrdError;
+use cipher::Cipher;
+use dh_params::SRD_DH_PARAMS;
 use message_types::*;
 use srd_blob::{Blob, SrdBlob};
-use dh_params::SRD_DH_PARAMS;
+use srd_errors::SrdError;
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
@@ -37,6 +38,9 @@ pub struct Srd {
     delegation_key: [u8; 32],
     integrity_key: [u8; 32],
     iv: [u8; 32],
+
+    supported_ciphers: Vec<Cipher>,
+    cipher: Cipher,
 
     generator: BigUint,
 
@@ -70,6 +74,9 @@ impl Srd {
             delegation_key: [0; 32],
             integrity_key: [0; 32],
             iv: [0; 32],
+
+            supported_ciphers: Vec::new(),
+            cipher: Cipher::XChaCha20,
 
             generator: BigUint::from_bytes_be(&[0]),
 
@@ -129,6 +136,9 @@ impl Srd {
             integrity_key: [0; 32],
             iv: [0; 32],
 
+            supported_ciphers: Vec::new(),
+            cipher: Cipher::XChaCha20,
+
             generator: BigUint::from_bytes_be(&[0]),
 
             prime: BigUint::from_bytes_be(&[0]),
@@ -180,6 +190,10 @@ impl Srd {
         blob.write_to(&mut data)?;
         self.blob = Some(SrdBlob::new(T::blob_type(), &data));
         Ok(())
+    }
+
+    pub fn set_ciphers(&mut self, ciphers: Vec<Cipher>) {
+        self.supported_ciphers = ciphers
     }
 
     fn _set_key_size(&mut self, key_size: u16) -> Result<()> {
@@ -482,6 +496,7 @@ impl Srd {
                     self.seq_num,
                     b,
                     &self.messages,
+                    self.cipher,
                     &self.integrity_key,
                     &self.delegation_key,
                     &self.iv,
@@ -500,7 +515,7 @@ impl Srd {
         let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
         in_packet.verify_mac(&self.messages, &self.integrity_key)?;
 
-        self.blob = Some(in_packet.get_data(&self.delegation_key, &self.iv)?);
+        self.blob = Some(in_packet.get_data(self.cipher, &self.delegation_key, &self.iv)?);
 
         self.messages.push(Box::new(in_packet));
 
@@ -534,8 +549,7 @@ impl Srd {
         hash.input(&self.secret_key);
         hash.input(&self.server_nonce);
 
-        self.delegation_key
-            .clone_from_slice(&hash.result().to_vec());
+        self.delegation_key.clone_from_slice(&hash.result().to_vec());
 
         hash = Sha256::new();
         hash.input(&self.server_nonce);
