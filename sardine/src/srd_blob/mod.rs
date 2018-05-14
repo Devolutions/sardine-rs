@@ -6,7 +6,6 @@ use std::io::Write;
 use Result;
 use message_types::SrdMessage;
 
-#[cfg(feature = "wasm")]
 use srd::getrandom;
 use rand::{EntropyRng, RngCore};
 

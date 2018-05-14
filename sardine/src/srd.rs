@@ -600,6 +600,8 @@ impl Srd {
 #[wasm_bindgen]
 extern {
     // For WebAssembly, you must bind your own rng or else it will fail. This will eventually be done automatically by the rand crate.
-    pub fn alert(s: &str);
     pub fn getrandom(v: Vec<u8>) -> Vec<u8>;
 }
+
+#[cfg(not(feature = "wasm"))]
+pub fn getrandom(_: Vec<u8>) -> Vec<u8> { unreachable!() }
