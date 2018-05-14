@@ -7,6 +7,10 @@ use chacha::{ChaCha, KeyStream};
 
 use Result;
 
+const AES256_FLAG: u32 = 0x00000001;
+const CHACHA20_FLAG: u32 = 0x00000100;
+const XCHACHA20_FLAG: u32 = 0x00000200;
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Cipher {
     AES256,
@@ -33,21 +37,21 @@ impl Cipher {
 
     pub fn flag(&self) -> u32 {
         match self {
-            &Cipher::AES256 => 0x00000001,
-            &Cipher::ChaCha20 => 0x00000100,
-            &Cipher::XChaCha20 => 0x00000200,
+            &Cipher::AES256 => AES256_FLAG,
+            &Cipher::ChaCha20 => CHACHA20_FLAG,
+            &Cipher::XChaCha20 => XCHACHA20_FLAG,
         }
     }
 
     pub fn from_flags(flags: u32) -> Vec<Self> {
         let mut ciphers = Vec::new();
-        if flags & 0x00000001 != 0 {
+        if flags & AES256_FLAG != 0 {
             ciphers.push(Cipher::AES256)
         };
-        if flags & 0x00000100 != 0 {
+        if flags & CHACHA20_FLAG != 0 {
             ciphers.push(Cipher::ChaCha20)
         };
-        if flags & 0x00000200 != 0 {
+        if flags & XCHACHA20_FLAG != 0 {
             ciphers.push(Cipher::XChaCha20)
         };
         ciphers

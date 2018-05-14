@@ -117,6 +117,13 @@ impl Srd {
 #[cfg(not(feature = "wasm"))]
 impl Srd {
     pub fn new(is_server: bool) -> Result<Srd> {
+        let supported_ciphers;
+        if cfg!(feature = "fips") {
+            supported_ciphers = vec![Cipher::AES256];
+        } else {
+            supported_ciphers = vec![Cipher::XChaCha20, Cipher::ChaCha20];
+        }
+
         Ok(Srd {
             blob: None,
             output_data: None,
@@ -136,7 +143,7 @@ impl Srd {
             integrity_key: [0; 32],
             iv: [0; 32],
 
-            supported_ciphers: vec![Cipher::XChaCha20, Cipher::ChaCha20],
+            supported_ciphers,
             cipher: Cipher::XChaCha20,
 
             generator: BigUint::from_bytes_be(&[0]),
@@ -192,8 +199,15 @@ impl Srd {
         Ok(())
     }
 
-    pub fn set_ciphers(&mut self, ciphers: Vec<Cipher>) {
-        self.supported_ciphers = ciphers
+    pub fn set_ciphers(&mut self, ciphers: Vec<Cipher>) -> Result<()> {
+        if cfg!(not(feature = "fips")) {
+            if ciphers.contains(&Cipher::AES256) {
+                return Err(SrdError::Cipher);
+            }
+        }
+
+        self.supported_ciphers = ciphers;
+        Ok(())
     }
 
     fn _set_key_size(&mut self, key_size: u16) -> Result<()> {

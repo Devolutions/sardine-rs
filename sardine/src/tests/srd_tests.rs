@@ -63,6 +63,7 @@ fn good_login() {
     let mut out_data: Vec<u8> = Vec::new();
 
     let mut client_ciphers = Vec::new();
+    //client_ciphers.push(Cipher::AES256);
     client_ciphers.push(Cipher::ChaCha20);
     client_ciphers.push(Cipher::XChaCha20);
 
@@ -70,8 +71,8 @@ fn good_login() {
     server_ciphers.push(Cipher::ChaCha20);
     server_ciphers.push(Cipher::XChaCha20);
 
-    client.set_ciphers(client_ciphers);
-    server.set_ciphers(server_ciphers);
+    client.set_ciphers(client_ciphers).unwrap();
+    server.set_ciphers(server_ciphers).unwrap();
 
     // Commenting out those two lines should work without cbt verification
     client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
