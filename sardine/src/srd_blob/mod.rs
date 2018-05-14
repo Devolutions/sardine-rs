@@ -5,6 +5,8 @@ use std::io::Write;
 
 use Result;
 use message_types::SrdMessage;
+
+#[cfg(feature = "wasm")]
 use srd::getrandom;
 use rand::{EntropyRng, RngCore};
 
@@ -21,6 +23,20 @@ use wasm_bindgen::prelude::*;
 pub struct SrdBlob {
     blob_type: String,
     data: Vec<u8>,
+}
+
+#[cfg(feature="wasm")]
+#[wasm_bindgen]
+impl SrdBlob {
+    pub fn new_logon(username: &str, password: &str) -> SrdBlob {
+        let logon = LogonBlob::new(username, password);
+        let mut data = Vec::new();
+        logon.write_to(&mut data).unwrap();
+        SrdBlob {
+            blob_type: "Logon".to_string(),
+            data
+        }
+    }
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
