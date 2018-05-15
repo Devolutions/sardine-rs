@@ -6,9 +6,8 @@ use rand::{EntropyRng, RngCore};
 
 use num_bigint::BigUint;
 
-use digest::Digest;
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 
 use Result;
 use cipher::Cipher;

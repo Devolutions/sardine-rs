@@ -38,7 +38,7 @@ impl fmt::Display for SrdError {
             &SrdError::MissingBlob => write!(f, "Blob error"),
             &SrdError::BlobFormatError => write!(f, "Blob format error"),
             &SrdError::Cipher => write!(f, "Cipher error"),
-            &SrdError::Rng => write!(f, "RNG"),
+            &SrdError::Rng => write!(f, "RNG error"),
             &SrdError::InvalidKeySize => write!(f, "Key Size error"),
             &SrdError::InvalidMac => write!(f, "MAC error"),
             &SrdError::InvalidCbt => write!(f, "CBT error"),
@@ -61,7 +61,7 @@ impl std::error::Error for SrdError {
             SrdError::MissingBlob => "No blob specified",
             SrdError::BlobFormatError => "Blob format error",
             SrdError::Cipher => "There is a problem with supported ciphers",
-            SrdError::Rng => "Couldn't generate random keys!",
+            SrdError::Rng => "Couldn't generate random keys",
             SrdError::InvalidKeySize => "Key size must be 256, 512 or 1024",
             SrdError::InvalidMac => "Message authentication code is invalid",
             SrdError::InvalidCbt => "Channel binding token is invalid",
@@ -105,7 +105,7 @@ impl From<chacha::Error> for SrdError {
 }
 
 impl From<rand::Error> for SrdError {
-    fn from(_: rand::Error) -> SrdError {
+    fn from(_error: rand::Error) -> SrdError {
         SrdError::Rng
     }
 }
