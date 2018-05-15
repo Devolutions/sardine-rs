@@ -16,7 +16,7 @@ crate-type = ["staticlib", "lib", "cdylib"]
 
 [dependencies]
 cfg-if = "0.1"
-rand = "0.5.0-pre.2"
+rand = "=0.5.0-pre.2"
 hmac = "0.6"
 sha2 = "0.7"
 digest = "0.7"
@@ -34,7 +34,7 @@ libc = "0.2.40"
 
 [features]
 default = []
-wasm = ["wasm-bindgen", "rand/stdweb"]
+wasm = ["wasm-bindgen"]
 aes = ["aes_frast"]
 fips = ["aes"]
 

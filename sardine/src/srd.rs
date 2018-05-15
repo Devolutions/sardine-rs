@@ -149,6 +149,14 @@ pub struct Srd {
     secret_key: Vec<u8>,
 }
 
+// Same implementation, both public
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+impl Srd {
+    pub fn set_raw_blob(&mut self, blob: SrdBlob) {
+        self.blob = Some(blob);
+    }
+}
+
 impl Srd {
     fn _new(is_server: bool) -> Srd {
         let supported_ciphers;
@@ -261,10 +269,6 @@ impl Srd {
 
     pub fn get_raw_blob(&self) -> Option<SrdBlob> {
         return self.blob.clone();
-    }
-
-    pub fn set_raw_blob(&mut self, blob: SrdBlob) {
-        self.blob = Some(blob);
     }
 
     fn set_key_size(&mut self, key_size: u16) -> Result<()> {
