@@ -149,83 +149,8 @@ pub struct Srd {
     secret_key: Vec<u8>,
 }
 
-// WASM public function
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
 impl Srd {
-    pub fn new(is_server: bool) -> Srd {
-        Srd {
-            blob: None,
-            output_data: None,
-
-            is_server,
-            key_size: 256,
-            seq_num: 0,
-            state: 0,
-
-            messages: vec![Cipher::XChaCha20, Cipher::ChaCha20],
-
-            cert_data: None,
-
-            client_nonce: [0; 32],
-            server_nonce: [0; 32],
-            delegation_key: [0; 32],
-            integrity_key: [0; 32],
-            iv: [0; 32],
-
-            supported_ciphers: Vec::new(),
-            cipher: Cipher::XChaCha20,
-
-            generator: BigUint::from_bytes_be(&[0]),
-
-            prime: BigUint::from_bytes_be(&[0]),
-            private_key: BigUint::from_bytes_be(&[0]),
-            secret_key: Vec::new(),
-
-            rng: OsRng::new().unwrap(),
-        }
-    }
-
-    pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
-        let mut output_data = Vec::new();
-        match self._authenticate(&input_data, &mut output_data) {
-            Err(_) => SrdJsResult {
-                output_data,
-                res_code: -1,
-            },
-            Ok(b) => {
-                if b {
-                    SrdJsResult {
-                        output_data,
-                        res_code: 0,
-                    }
-                } else {
-                    SrdJsResult {
-                        output_data,
-                        res_code: 1,
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn get_delegation_key(&self) -> Vec<u8> {
-        self.delegation_key.to_vec()
-    }
-
-    pub fn get_integrity_key(&self) -> Vec<u8> {
-        self.integrity_key.to_vec()
-    }
-
-    pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
-        self._set_cert_data(buffer).unwrap();
-    }
-}
-
-// Native public functions
-#[cfg(not(feature = "wasm"))]
-impl Srd {
-    pub fn new(is_server: bool) -> Result<Srd> {
+    fn _new(is_server: bool) -> Srd {
         let supported_ciphers;
         if cfg!(feature = "fips") {
             supported_ciphers = vec![Cipher::AES256];
@@ -235,7 +160,7 @@ impl Srd {
             supported_ciphers = vec![Cipher::XChaCha20, Cipher::ChaCha20];
         }
 
-        Ok(Srd {
+        Srd {
             blob: None,
             output_data: None,
 
@@ -316,7 +241,33 @@ impl Srd {
         Ok(())
     }
 
-    fn _set_key_size(&mut self, key_size: u16) -> Result<()> {
+    pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
+        if self.blob.is_some() {
+            let blob = self.blob.as_ref().unwrap();
+            if blob.blob_type() == T::blob_type() {
+                let mut cursor = std::io::Cursor::new(blob.data());
+                return Ok(Some(T::read_from(&mut cursor)?));
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
+        let mut data = Vec::new();
+        blob.write_to(&mut data)?;
+        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
+        Ok(())
+    }
+
+    pub fn get_raw_blob(&self) -> Option<SrdBlob> {
+        return self.blob.clone();
+    }
+
+    pub fn set_raw_blob(&mut self, blob: SrdBlob) {
+        self.blob = Some(blob);
+    }
+
+    fn set_key_size(&mut self, key_size: u16) -> Result<()> {
         match key_size {
             256 | 512 | 1024 => {
                 self.key_size = key_size;
@@ -393,12 +344,6 @@ impl Srd {
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
 
         fill_random(&mut private_key_bytes)?;
-        // Challenge
-        if cfg!(feature = "wasm") {
-            private_key_bytes = getrandom(private_key_bytes);
-        } else {
-            self.rng.try_fill_bytes(&mut private_key_bytes)?;
-        }
 
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
@@ -443,11 +388,8 @@ impl Srd {
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
 
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        if cfg!(feature = "wasm") {
-            private_key_bytes = getrandom(private_key_bytes);
-        } else {
-            self.rng.try_fill_bytes(&mut private_key_bytes)?;
-        }
+
+        fill_random(&mut private_key_bytes)?;
 
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 

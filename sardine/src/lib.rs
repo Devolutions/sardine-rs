@@ -3,15 +3,14 @@ extern crate byteorder;
 extern crate digest;
 extern crate hmac;
 extern crate num_bigint;
-extern crate sha2;
 extern crate rand;
+extern crate sha2;
 
 #[cfg(feature = "aes")]
 extern crate aes_frast;
 
 extern crate chacha;
 
-#[cfg(feature = "wasm")]
 #[macro_use]
 extern crate cfg_if;
 
