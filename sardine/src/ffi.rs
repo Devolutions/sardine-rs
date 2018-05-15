@@ -2,9 +2,9 @@
 
 extern crate libc;
 
-use std;
 use srd::Srd;
 use srd_blob::SrdBlob;
+use std;
 
 #[no_mangle]
 pub extern "C" fn Srd_New(is_server: bool) -> *mut Srd {

@@ -1,13 +1,11 @@
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std;
 use std::io::{Read, Write};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use aes_frast::{aes_core, aes_with_operation_mode};
-
+use Result;
+use cipher::Cipher;
 use message_types::{SrdMessage, SrdPacket, srd_flags::SRD_FLAG_MAC, srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
 use srd_blob::SrdBlob;
-use Result;
-use srd_errors::SrdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdDelegate {
@@ -93,13 +91,14 @@ impl SrdDelegate {
         seq_num: u8,
         srd_blob: &SrdBlob,
         previous_messages: &[Box<SrdPacket>],
+        cipher: Cipher,
         integrity_key: &[u8],
         delegation_key: &[u8],
         iv: &[u8],
     ) -> Result<Self> {
         let mut v_blob = Vec::new();
         srd_blob.write_to(&mut v_blob)?;
-        let encrypted_blob = encrypt_data(&v_blob, delegation_key, iv)?;
+        let encrypted_blob = cipher.encrypt_data(&v_blob, delegation_key, iv)?;
 
         let mut response = SrdDelegate {
             signature: SRD_SIGNATURE,
@@ -115,41 +114,13 @@ impl SrdDelegate {
         Ok(response)
     }
 
-    pub fn get_data(&self, key: &[u8], iv: &[u8]) -> Result<SrdBlob> {
-        let buffer = decrypt_data(&self.encrypted_blob, key, iv)?;
+    pub fn get_data(&self, cipher: Cipher, key: &[u8], iv: &[u8]) -> Result<SrdBlob> {
+        let buffer = cipher.decrypt_data(&self.encrypted_blob, key, iv)?;
 
         let mut cursor = std::io::Cursor::new(buffer.as_slice());
         let srd_blob = SrdBlob::read_from(&mut cursor)?;
         Ok(srd_blob)
     }
-}
-
-fn encrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    if data.len() % 16 != 0 {
-        return Err(SrdError::InvalidDataLength);
-    }
-
-    let mut w_keys = vec![0u32; 60];
-    let mut cipher = vec![0u8; data.len()];
-
-    aes_core::setkey_enc_auto(&key, &mut w_keys);
-    aes_with_operation_mode::cbc_enc(&data, &mut cipher, &w_keys, &iv);
-
-    Ok(cipher)
-}
-
-pub fn decrypt_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    if data.len() % 16 != 0 {
-        return Err(SrdError::InvalidDataLength);
-    }
-
-    let mut w_keys = vec![0u32; 60];
-    let mut cipher = vec![0u8; data.len()];
-
-    aes_core::setkey_dec_auto(&key, &mut w_keys);
-    aes_with_operation_mode::cbc_dec(&data, &mut cipher, &w_keys, &iv);
-
-    Ok(cipher)
 }
 
 //#[cfg(test)]

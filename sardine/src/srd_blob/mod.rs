@@ -1,11 +1,11 @@
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std;
 use std::io::Read;
 use std::io::Write;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use rand::{OsRng, Rng};
 use Result;
 use message_types::SrdMessage;
+use rand::{OsRng, Rng};
 
 mod basic_blob;
 mod logon_blob;
@@ -112,9 +112,9 @@ pub trait Blob: SrdMessage {
 
 #[cfg(test)]
 mod test {
-    use std;
     use message_types::SrdMessage;
     use srd_blob::SrdBlob;
+    use std;
 
     #[test]
     fn blob_encoding() {

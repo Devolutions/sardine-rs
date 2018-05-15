@@ -1,11 +1,11 @@
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std;
 use std::io::Read;
 use std::io::Write;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
+use Result;
 use message_types::{SrdMessage, SrdPacket, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC}, srd_msg_id::SRD_CONFIRM_MSG_ID,
                     SRD_SIGNATURE};
-use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdConfirm {
@@ -119,8 +119,8 @@ impl SrdConfirm {
 
 #[cfg(test)]
 mod test {
-    use std;
     use message_types::{SrdConfirm, SrdMessage, SrdPacket, srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
+    use std;
 
     #[test]
     fn confirm_encoding() {

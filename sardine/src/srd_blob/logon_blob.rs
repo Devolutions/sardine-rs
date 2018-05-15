@@ -1,11 +1,11 @@
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std;
 use std::io::Read;
 use std::io::Write;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use Result;
-use srd_blob::Blob;
 use message_types::SrdMessage;
+use srd_blob::Blob;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LogonBlob {
