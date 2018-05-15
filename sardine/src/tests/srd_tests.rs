@@ -63,7 +63,7 @@ fn good_login() {
     let mut out_data: Vec<u8> = Vec::new();
 
     let mut client_ciphers = Vec::new();
-    client_ciphers.push(Cipher::AES256);
+    //client_ciphers.push(Cipher::AES256);
     client_ciphers.push(Cipher::ChaCha20);
     client_ciphers.push(Cipher::XChaCha20);
 
