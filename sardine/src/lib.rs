@@ -2,8 +2,8 @@
 extern crate byteorder;
 extern crate hmac;
 extern crate num_bigint;
-extern crate sha2;
 extern crate rand;
+extern crate sha2;
 
 #[cfg(feature = "aes")]
 extern crate aes_frast;

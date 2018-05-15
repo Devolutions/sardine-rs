@@ -259,9 +259,11 @@ impl Srd {
         }
         Ok(None)
     }
-
-    fn _set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
-        self.cert_data = Some(buffer);
+    
+    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
+        let mut data = Vec::new();
+        blob.write_to(&mut data)?;
+        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
         Ok(())
     }
 

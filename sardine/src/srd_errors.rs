@@ -9,7 +9,6 @@ use std::string::FromUtf8Error;
 use chacha;
 use rand;
 
-
 #[derive(Debug)]
 pub enum SrdError {
     Io(Error),
