@@ -2,8 +2,8 @@
 extern crate byteorder;
 extern crate hmac;
 extern crate num_bigint;
-extern crate rand;
 extern crate sha2;
+extern crate rand;
 
 #[cfg(feature = "aes")]
 extern crate aes_frast;
@@ -14,6 +14,7 @@ extern crate chacha;
 extern crate cfg_if;
 
 mod cipher;
+
 mod dh_params;
 mod message_types;
 pub mod srd;

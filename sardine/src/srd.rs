@@ -11,6 +11,7 @@ use sha2::{Digest, Sha256};
 
 use Result;
 use cipher::Cipher;
+
 use dh_params::SRD_DH_PARAMS;
 use message_types::*;
 use srd_blob::{Blob, SrdBlob};
@@ -259,10 +260,8 @@ impl Srd {
         Ok(None)
     }
 
-    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
-        let mut data = Vec::new();
-        blob.write_to(&mut data)?;
-        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
+    fn _set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
+        self.cert_data = Some(buffer);
         Ok(())
     }
 
@@ -348,6 +347,7 @@ impl Srd {
 
         fill_random(&mut private_key_bytes)?;
 
+        // Challenge
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
