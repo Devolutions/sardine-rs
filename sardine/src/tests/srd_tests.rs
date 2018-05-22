@@ -56,14 +56,14 @@ static TEST_CERT_DATA: &'static [u8] = b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x0
 
 #[test]
 fn good_login() {
-    let mut client: Srd = Srd::new(false).unwrap();
-    let mut server: Srd = Srd::new(true).unwrap();
+    let mut client: Srd = Srd::new(false);
+    let mut server: Srd = Srd::new(true);
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();
 
     let mut client_ciphers = Vec::new();
-    client_ciphers.push(Cipher::AES256);
+    //client_ciphers.push(Cipher::AES256);
     client_ciphers.push(Cipher::ChaCha20);
     client_ciphers.push(Cipher::XChaCha20);
 

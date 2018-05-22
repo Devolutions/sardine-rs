@@ -1,6 +1,5 @@
 #![cfg_attr(feature = "wasm", feature(proc_macro, wasm_custom_section, wasm_import_module))]
 extern crate byteorder;
-extern crate digest;
 extern crate hmac;
 extern crate num_bigint;
 extern crate rand;
@@ -11,26 +10,38 @@ extern crate aes_frast;
 
 extern crate chacha;
 
-#[cfg(feature = "wasm")]
 #[macro_use]
-extern crate wasm_bindgen;
+extern crate cfg_if;
 
 mod cipher;
+
 mod dh_params;
 mod message_types;
 pub mod srd;
 pub mod srd_blob;
 mod srd_errors;
 
-#[cfg(not(feature = "wasm"))]
-pub mod ffi;
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use cipher::Cipher;
 pub use srd::Srd;
 pub use srd_errors::SrdError;
 
+cfg_if! {
+    if #[cfg(feature = "wasm")] {
+        #[macro_use]
+        extern crate wasm_bindgen;
+        pub use srd::SrdJsResult;
+    }
+    else {
+        pub mod ffi;
+    }
+}
+
 #[cfg(test)]
 mod tests;
+
+#[cfg(feature = "wasm")]
+fn main() {}
 
 //TODO Verify packet size before reading to send error instead of panicking
 //TODO Markdown documentation

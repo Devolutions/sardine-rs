@@ -5,7 +5,8 @@ use std::io::Write;
 
 use Result;
 use message_types::SrdMessage;
-use rand::{OsRng, Rng};
+
+use srd::fill_random;
 
 mod basic_blob;
 mod logon_blob;
@@ -20,6 +21,20 @@ use wasm_bindgen::prelude::*;
 pub struct SrdBlob {
     blob_type: String,
     data: Vec<u8>,
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl SrdBlob {
+    pub fn new_logon(username: &str, password: &str) -> SrdBlob {
+        let logon = LogonBlob::new(username, password);
+        let mut data = Vec::new();
+        logon.write_to(&mut data).unwrap();
+        SrdBlob {
+            blob_type: "Logon".to_string(),
+            data,
+        }
+    }
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -77,8 +92,6 @@ impl SrdMessage for SrdBlob {
     }
 
     fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
-        let mut rng = OsRng::new()?;
-
         let type_size = self.blob_type.len() + 1;
         let type_padding = 16 - (type_size + 8) % 16;
         let data_size = self.data.len();
@@ -93,13 +106,13 @@ impl SrdMessage for SrdBlob {
         buffer.write_u8(0u8)?;
 
         let mut padding = vec![0u8; type_padding];
-        rng.fill_bytes(&mut padding);
+        fill_random(&mut padding)?;
         buffer.write_all(&padding)?;
 
         buffer.write_all(&self.data)?;
 
         let mut padding = vec![0u8; data_padding];
-        rng.fill_bytes(&mut padding);
+        fill_random(&mut padding)?;
         buffer.write_all(&padding)?;
 
         Ok(())

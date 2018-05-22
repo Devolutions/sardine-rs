@@ -1,23 +1,123 @@
 use std;
 use std::io::Write;
 
-use rand::{OsRng, Rng};
+#[cfg(not(feature = "wasm"))]
+use rand::{EntropyRng, RngCore};
 
 use num_bigint::BigUint;
 
-use digest::Digest;
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 
 use Result;
 use cipher::Cipher;
+
 use dh_params::SRD_DH_PARAMS;
 use message_types::*;
 use srd_blob::{Blob, SrdBlob};
 use srd_errors::SrdError;
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
+cfg_if! {
+    if #[cfg(feature = "wasm")] {
+        use wasm_bindgen::prelude::*;
+        #[wasm_bindgen]
+        pub struct SrdJsResult {
+            output_data: Vec<u8>,
+            res_code: i32,
+        }
+
+        #[wasm_bindgen]
+        impl SrdJsResult {
+            pub fn output_data(&self) -> Vec<u8> {
+                self.output_data.clone()
+            }
+
+            pub fn res_code(&self) -> i32 {
+                self.res_code
+            }
+        }
+
+        // WASM public function
+        #[wasm_bindgen]
+        impl Srd {
+            #[wasm_bindgen(constructor)]
+            pub fn new(is_server: bool) -> Srd {
+                Srd::_new(is_server)
+            }
+
+            pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
+                let mut output_data = Vec::new();
+                self._authenticate(&input_data, &mut output_data).unwrap();
+                SrdJsResult {
+                    output_data,
+                    res_code: -1,
+                }
+                /*match self._authenticate(&input_data, &mut output_data) {
+                    Err(_) => SrdJsResult {
+                        output_data,
+                        res_code: -1,
+                    },
+                    Ok(b) => {
+                        if b {
+                            SrdJsResult {
+                                output_data,
+                                res_code: 0,
+                            }
+                        } else {
+                            SrdJsResult {
+                                output_data,
+                                res_code: 1,
+                            }
+                        }
+                    }
+                }*/
+            }
+
+            pub fn get_delegation_key(&self) -> Vec<u8> {
+                self.delegation_key.to_vec()
+            }
+
+            pub fn get_integrity_key(&self) -> Vec<u8> {
+                self.integrity_key.to_vec()
+            }
+
+            pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
+                self._set_cert_data(buffer).unwrap();
+            }
+        }
+    }
+    else {
+        // Native public functions
+        #[cfg(not(feature = "wasm"))]
+        impl Srd {
+            pub fn new(is_server: bool) -> Srd {
+                Srd::_new(is_server)
+            }
+
+            pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
+                self._authenticate(&input_data, output_data)
+            }
+
+            pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
+                (self.delegation_key, self.integrity_key)
+            }
+
+            pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
+                self._set_cert_data(buffer)?;
+                Ok(())
+            }
+
+            pub fn get_output_data(&self) -> &Option<Vec<u8>> {
+                &self.output_data
+            }
+
+            pub fn set_output_data(&mut self, output_data: Vec<u8>) {
+                self.output_data = Some(output_data);
+            }
+        }
+
+    }
+}
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct Srd {
@@ -47,76 +147,18 @@ pub struct Srd {
     prime: BigUint,
     private_key: BigUint,
     secret_key: Vec<u8>,
-
-    rng: OsRng,
 }
 
-// WASM public function
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
+// Same implementation, both public
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Srd {
-    pub fn new(is_server: bool) -> Srd {
-        Srd {
-            blob: None,
-            output_data: None,
-
-            is_server,
-            key_size: 256,
-            seq_num: 0,
-            state: 0,
-
-            messages: vec![Cipher::XChaCha20, Cipher::ChaCha20],
-
-            cert_data: None,
-
-            client_nonce: [0; 32],
-            server_nonce: [0; 32],
-            delegation_key: [0; 32],
-            integrity_key: [0; 32],
-            iv: [0; 32],
-
-            supported_ciphers: Vec::new(),
-            cipher: Cipher::XChaCha20,
-
-            generator: BigUint::from_bytes_be(&[0]),
-
-            prime: BigUint::from_bytes_be(&[0]),
-            private_key: BigUint::from_bytes_be(&[0]),
-            secret_key: Vec::new(),
-
-            rng: OsRng::new().unwrap(),
-        }
-    }
-
-    pub fn get_delegation_key(&self) -> Vec<u8> {
-        self.delegation_key.to_vec()
-    }
-
-    pub fn get_integrity_key(&self) -> Vec<u8> {
-        self.integrity_key.to_vec()
-    }
-
-    pub fn get_raw_blob(&self) -> SrdBlob {
-        return self.blob.clone().unwrap();
-    }
-
     pub fn set_raw_blob(&mut self, blob: SrdBlob) {
         self.blob = Some(blob);
     }
-
-    pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
-        self.cert_data = Some(buffer);
-    }
-
-    pub fn set_key_size(&mut self, key_size: u16) {
-        self._set_key_size(key_size).expect("Invalid key size!");
-    }
 }
 
-// Native public functions
-#[cfg(not(feature = "wasm"))]
 impl Srd {
-    pub fn new(is_server: bool) -> Result<Srd> {
+    fn _new(is_server: bool) -> Srd {
         let supported_ciphers;
         if cfg!(feature = "fips") {
             supported_ciphers = vec![Cipher::AES256];
@@ -126,7 +168,7 @@ impl Srd {
             supported_ciphers = vec![Cipher::XChaCha20, Cipher::ChaCha20];
         }
 
-        Ok(Srd {
+        Srd {
             blob: None,
             output_data: None,
 
@@ -153,51 +195,42 @@ impl Srd {
             prime: BigUint::from_bytes_be(&[0]),
             private_key: BigUint::from_bytes_be(&[0]),
             secret_key: Vec::new(),
-
-            rng: OsRng::new()?,
-        })
+        }
     }
 
-    pub fn get_keys(&self) -> ([u8; 32], [u8; 32]) {
-        (self.delegation_key, self.integrity_key)
-    }
+    fn _authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
+        // We don't want anybody to access previous output_data.
+        self.output_data = None;
 
-    pub fn get_raw_blob(&self) -> Option<SrdBlob> {
-        return self.blob.clone();
-    }
-
-    pub fn set_raw_blob(&mut self, blob: SrdBlob) {
-        self.blob = Some(blob);
-    }
-
-    pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
-        self.cert_data = Some(buffer);
-        Ok(())
-    }
-
-    pub fn set_key_size(&mut self, key_size: u16) -> Result<()> {
-        self._set_key_size(key_size)?;
-        Ok(())
-    }
-}
-
-impl Srd {
-    pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
-        if self.blob.is_some() {
-            let blob = self.blob.as_ref().unwrap();
-            if blob.blob_type() == T::blob_type() {
-                let mut cursor = std::io::Cursor::new(blob.data());
-                return Ok(Some(T::read_from(&mut cursor)?));
+        if self.is_server {
+            match self.state {
+                0 => self.server_authenticate_0(input_data, output_data)?,
+                1 => self.server_authenticate_1(input_data, output_data)?,
+                2 => {
+                    self.server_authenticate_2(input_data)?;
+                    self.state += 1;
+                    return Ok(true);
+                }
+                _ => return Err(SrdError::BadSequence),
+            }
+        } else {
+            match self.state {
+                0 => self.client_authenticate_0(output_data)?,
+                1 => self.client_authenticate_1(input_data, output_data)?,
+                2 => {
+                    self.client_authenticate_2(input_data, output_data)?;
+                    self.state += 1;
+                    return Ok(true);
+                }
+                _ => return Err(SrdError::BadSequence),
             }
         }
-
-        Ok(None)
+        self.state += 1;
+        Ok(false)
     }
 
-    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
-        let mut data = Vec::new();
-        blob.write_to(&mut data)?;
-        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
+    fn _set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
+        self.cert_data = Some(buffer);
         Ok(())
     }
 
@@ -216,7 +249,29 @@ impl Srd {
         Ok(())
     }
 
-    fn _set_key_size(&mut self, key_size: u16) -> Result<()> {
+    pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
+        if self.blob.is_some() {
+            let blob = self.blob.as_ref().unwrap();
+            if blob.blob_type() == T::blob_type() {
+                let mut cursor = std::io::Cursor::new(blob.data());
+                return Ok(Some(T::read_from(&mut cursor)?));
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
+        let mut data = Vec::new();
+        blob.write_to(&mut data)?;
+        self.blob = Some(SrdBlob::new(T::blob_type(), &data));
+        Ok(())
+    }
+
+    pub fn get_raw_blob(&self) -> Option<SrdBlob> {
+        return self.blob.clone();
+    }
+
+    fn set_key_size(&mut self, key_size: u16) -> Result<()> {
         match key_size {
             256 | 512 | 1024 => {
                 self.key_size = key_size;
@@ -260,45 +315,6 @@ impl Srd {
         Ok(packet)
     }
 
-    pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
-        // We don't want anybody to access previous output_data.
-        self.output_data = None;
-
-        if self.is_server {
-            match self.state {
-                0 => self.server_authenticate_0(input_data, output_data)?,
-                1 => self.server_authenticate_1(input_data, output_data)?,
-                2 => {
-                    self.server_authenticate_2(input_data)?;
-                    self.state += 1;
-                    return Ok(true);
-                }
-                _ => return Err(SrdError::BadSequence),
-            }
-        } else {
-            match self.state {
-                0 => self.client_authenticate_0(output_data)?,
-                1 => self.client_authenticate_1(input_data, output_data)?,
-                2 => {
-                    self.client_authenticate_2(input_data, output_data)?;
-                    self.state += 1;
-                    return Ok(true);
-                }
-                _ => return Err(SrdError::BadSequence),
-            }
-        }
-        self.state += 1;
-        Ok(false)
-    }
-
-    pub fn get_output_data(&self) -> &Option<Vec<u8>> {
-        &self.output_data
-    }
-
-    pub fn set_output_data(&mut self, output_data: Vec<u8>) {
-        self.output_data = Some(output_data);
-    }
-
     // Client initiate
     fn client_authenticate_0(&mut self, mut output_data: &mut Vec<u8>) -> Result<()> {
         let mut cipher_flags = 0u32;
@@ -322,21 +338,23 @@ impl Srd {
     fn server_authenticate_0(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Negotiate
         let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
-        self._set_key_size(in_packet.key_size())?;
+        self.set_key_size(in_packet.key_size())?;
         self.find_dh_parameters()?;
 
         let key_size = in_packet.key_size();
 
         self.messages.push(Box::new(in_packet));
 
-        // Challenge
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        self.rng.fill_bytes(&mut private_key_bytes);
+
+        fill_random(&mut private_key_bytes)?;
+
+        // Challenge
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        self.rng.fill_bytes(&mut self.server_nonce);
+        fill_random(&mut self.server_nonce)?;
 
         let mut cipher_flags = 0u32;
         for c in &self.supported_ciphers {
@@ -375,12 +393,14 @@ impl Srd {
         self.prime = BigUint::from_bytes_be(&in_packet.prime);
 
         let mut private_key_bytes = vec![0u8; self.key_size as usize];
-        self.rng.fill_bytes(&mut private_key_bytes);
+
+        fill_random(&mut private_key_bytes)?;
+
         self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
         let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        self.rng.fill_bytes(&mut self.client_nonce);
+        fill_random(&mut self.server_nonce)?;
 
         self.server_nonce = in_packet.nonce;
         self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
@@ -629,4 +649,24 @@ impl Srd {
 
         self.iv.clone_from_slice(&hash.result().to_vec());
     }
+}
+
+#[cfg(feature = "wasm")]
+pub fn fill_random(data: &mut [u8]) -> Result<()> {
+    let mut new_data = getrandom(data.to_vec());
+    new_data.write(data)?;
+    Ok(())
+}
+
+#[cfg(not(feature = "wasm"))]
+pub fn fill_random(data: &mut [u8]) -> Result<()> {
+    EntropyRng::new().try_fill_bytes(data)?;
+    Ok(())
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+extern "C" {
+    // For WebAssembly, you must bind your own rng or else it will fail. This will eventually be done automatically by the rand crate.
+    fn getrandom(v: Vec<u8>) -> Vec<u8>;
 }
