@@ -16,11 +16,11 @@ crate-type = ["staticlib", "lib", "cdylib"]
 
 [dependencies]
 cfg-if = "0.1"
-rand = "=0.5.0-pre.2"
+rand = "0.5.0"
 hmac = "0.6"
 sha2 = "0.7"
 chacha = "0.1.0"
-wasm-bindgen = { version = "=0.2.8", optional = true}
+wasm-bindgen = { version = "=0.2.8", default_features = false, features = ["std"], optional = true}
 
 num-bigint = {version = "0.1", default_features = false}
 num-traits = {version = "0.1", default_features = false}
