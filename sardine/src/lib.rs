@@ -40,6 +40,9 @@ cfg_if! {
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "wasm")]
+fn main() {}
+
 //TODO Verify packet size before reading to send error instead of panicking
 //TODO Markdown documentation
 //TODO Reorder imports

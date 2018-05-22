@@ -259,7 +259,7 @@ impl Srd {
         }
         Ok(None)
     }
-    
+
     pub fn set_blob<T: Blob>(&mut self, blob: T) -> Result<()> {
         let mut data = Vec::new();
         blob.write_to(&mut data)?;

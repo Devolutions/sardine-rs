@@ -12,7 +12,7 @@ authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
 
 [lib]
 name = "sardine"
-crate-type = ["staticlib", "lib", "cdylib"]
+crate-type = ["staticlib", "lib"]
 
 [dependencies]
 cfg-if = "0.1"
@@ -37,3 +37,8 @@ wasm = ["wasm-bindgen"]
 aes = ["aes_frast"]
 fips = ["aes"]
 
+# Workaround for building webassembly withouth breaking CI. For webassembly, build with --bin. Work currently in progress to allow target based crate-type.
+[[example]]
+name = "wasm"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
