@@ -1,6 +1,6 @@
 use base64::{decode, encode};
-use hyper;
-use hyper::header::Scheme;
+use hyperx;
+use hyperx::header::Scheme;
 use std::fmt;
 use std::str::FromStr;
 
@@ -20,14 +20,14 @@ impl Scheme for SrdAuthorizationScheme {
 }
 
 impl FromStr for SrdAuthorizationScheme {
-    type Err = hyper::Error;
+    type Err = hyperx::Error;
 
     fn from_str(s: &str) -> Result<SrdAuthorizationScheme, Self::Err> {
         match decode(s) {
             Ok(msg) => Ok(SrdAuthorizationScheme { msg }),
             Err(e) => {
                 error!("SrdAuthorizationScheme::from_str base64 error: {}", e);
-                Err(hyper::Error::Header)
+                Err(hyperx::Error::Header)
             }
         }
     }
