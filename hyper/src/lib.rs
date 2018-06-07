@@ -1,6 +1,6 @@
 extern crate base64;
 #[macro_use]
-extern crate hyper;
+extern crate hyperx;
 #[macro_use]
 extern crate log;
 extern crate uuid;

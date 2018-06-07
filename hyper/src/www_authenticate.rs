@@ -1,6 +1,6 @@
 use base64;
-use hyper;
-use hyper::header;
+use hyperx;
+use hyperx::header;
 use std::fmt;
 use std::str;
 
@@ -8,6 +8,7 @@ use std::str;
 pub enum AuthenticateScheme {
     Srd,
 }
+
 impl fmt::Display for AuthenticateScheme {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -44,7 +45,7 @@ impl header::Header for WWWAuthenticate {
         "WWW-Authenticate"
     }
 
-    fn parse_header(raw: &header::Raw) -> hyper::Result<WWWAuthenticate> {
+    fn parse_header(raw: &header::Raw) -> hyperx::Result<WWWAuthenticate> {
         let mut pairs = Vec::with_capacity(raw.len());
         for line in raw {
             let header = try!(str::from_utf8(line));
@@ -52,7 +53,7 @@ impl header::Header for WWWAuthenticate {
             if header.starts_with(scheme) {
                 if scheme.len() + 1 < line.len() {
                     let bytes = match base64::decode(&header[scheme.len() + 1..]) {
-                        Err(_) => return Err(hyper::Error::Header),
+                        Err(_) => return Err(hyperx::Error::Header),
                         Ok(x) => x,
                     };
                     pairs.push((AuthenticateScheme::Srd, Some(bytes)));
@@ -62,13 +63,13 @@ impl header::Header for WWWAuthenticate {
             }
         }
         if pairs.is_empty() {
-            Err(hyper::Error::Header)
+            Err(hyperx::Error::Header)
         } else {
             Ok(WWWAuthenticate(pairs))
         }
     }
 
-    fn fmt_header(&self, f: &mut hyper::header::Formatter) -> fmt::Result {
+    fn fmt_header(&self, f: &mut header::Formatter) -> fmt::Result {
         f.fmt_line(self)
     }
 }
