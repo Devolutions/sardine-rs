@@ -102,6 +102,14 @@ cfg_if! {
                 (self.delegation_key, self.integrity_key)
             }
 
+            pub fn get_delegation_key(&self) -> Vec<u8> {
+                self.delegation_key.to_vec()
+            }
+
+            pub fn get_integrity_key(&self) -> Vec<u8> {
+                self.integrity_key.to_vec()
+            }
+
             pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
                 self._set_cert_data(buffer)?;
                 Ok(())
