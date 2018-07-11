@@ -22,6 +22,12 @@ namespace Sardine
         public static extern int Srd_SetCertData(IntPtr handle, byte[] data, int size);
 
         [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Srd_GetDelegationKey(IntPtr handle, byte[] data, int size);
+
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Srd_GetIntegrityKey(IntPtr handle, byte[] data, int size);
+
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_Input(IntPtr handle, byte[] data, int size);
 
         [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
@@ -65,7 +71,7 @@ namespace Sardine
             size = Srd_GetBlobName(m_handle, data, size);
 
             UTF8Encoding utf8 = new UTF8Encoding();
-            return utf8.GetString(data, 0, size);
+            return utf8.GetString(data, 0, size - 1);
         }
 
         public int GetBlobData(ref string str)
@@ -84,7 +90,7 @@ namespace Sardine
             size = Srd_GetBlobData(m_handle, data, size);
 
             UTF8Encoding utf8 = new UTF8Encoding();
-            str = utf8.GetString(data, 0, size);
+            str = utf8.GetString(data, 0, size - 1);
             return size;
         }
 
@@ -101,6 +107,40 @@ namespace Sardine
 
             data = new byte[size];
             size = Srd_GetBlobData(m_handle, data, size);
+
+            return size;
+        }
+
+        public int GetDelegationKey(ref byte[] data)
+        {
+            int size;
+
+            data = null;
+
+            size = Srd_GetDelegationKey(m_handle, null, 0);
+
+            if (size < 1)
+                return size;
+
+            data = new byte[size];
+            size = Srd_GetDelegationKey(m_handle, data, size);
+
+            return size;
+        }
+
+        public int GetIntegrityKey(ref byte[] data)
+        {
+            int size;
+
+            data = null;
+
+            size = Srd_GetIntegrityKey(m_handle, null, 0);
+
+            if (size < 1)
+                return size;
+
+            data = new byte[size];
+            size = Srd_GetIntegrityKey(m_handle, data, size);
 
             return size;
         }
@@ -242,6 +282,16 @@ namespace Sardine
 
             Console.WriteLine("BlobName: {0} BlobData: {1}",
                 server.GetBlobName(), blobData);
+
+            byte[] delegationKey = null;
+            byte[] integrityKey = null;
+            server.GetDelegationKey(ref delegationKey); // same as client, used for encryption
+            server.GetIntegrityKey(ref integrityKey); // same as client, used for integrity
+
+            Console.WriteLine("\nDelegationKey:");
+            Utils.HexDump(delegationKey);
+            Console.WriteLine("\nIntegrityKey:");
+            Utils.HexDump(integrityKey);
 
             return 1;
         }

@@ -142,3 +142,41 @@ pub extern "C" fn Srd_SetCertData(srd_handle: *mut Srd, data: *const u8, data_si
         Err(_) => -1,
     }
 }
+
+#[no_mangle]
+pub extern "C" fn Srd_GetDelegationKey(srd_handle: *mut Srd, buffer: *mut u8, buffer_size: libc::c_int) -> libc::c_int {
+    let srd = unsafe { &mut *srd_handle };
+
+    let key = srd.get_delegation_key();
+    let size = key.len() as i32;
+
+    if buffer != std::ptr::null_mut() {
+        if size > buffer_size {
+            return -1;
+        }
+
+        let buffer_data = unsafe { std::slice::from_raw_parts_mut::<u8>(buffer, buffer_size as usize) };
+        buffer_data.clone_from_slice(&key);
+    }
+
+    return size;
+}
+
+#[no_mangle]
+pub extern "C" fn Srd_GetIntegrityKey(srd_handle: *mut Srd, buffer: *mut u8, buffer_size: libc::c_int) -> libc::c_int {
+    let srd = unsafe { &mut *srd_handle };
+
+    let key = srd.get_integrity_key();
+    let size = key.len() as i32;
+
+    if buffer != std::ptr::null_mut() {
+        if size > buffer_size {
+            return -1;
+        }
+
+        let buffer_data = unsafe { std::slice::from_raw_parts_mut::<u8>(buffer, buffer_size as usize) };
+        buffer_data.clone_from_slice(&key);
+    }
+
+    return size;
+}
