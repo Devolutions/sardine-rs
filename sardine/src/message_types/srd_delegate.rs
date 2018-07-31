@@ -2,10 +2,13 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std;
 use std::io::{Read, Write};
 
-use Result;
 use cipher::Cipher;
-use message_types::{SrdMessage, SrdPacket, srd_flags::SRD_FLAG_MAC, srd_msg_id::SRD_DELEGATE_MSG_ID, SRD_SIGNATURE};
+use message_types::{
+    srd_flags::SRD_FLAG_MAC, srd_message::ReadMac, srd_msg_id::SRD_DELEGATE_MSG_ID, SrdMessage, SrdPacket,
+    SRD_SIGNATURE,
+};
 use srd_blob::SrdBlob;
+use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdDelegate {
@@ -33,8 +36,7 @@ impl SrdMessage for SrdDelegate {
         buffer.read_exact(&mut blob)?;
 
         let mut mac = [0u8; 32];
-
-        buffer.read_exact(&mut mac)?;
+        buffer.read_mac(&mut mac)?;
 
         Ok(SrdDelegate {
             signature,

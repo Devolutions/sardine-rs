@@ -3,9 +3,11 @@ use std;
 use std::io::Read;
 use std::io::Write;
 
+use message_types::{
+    srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC}, srd_message::ReadMac, srd_msg_id::SRD_CONFIRM_MSG_ID, SrdMessage,
+    SrdPacket, SRD_SIGNATURE,
+};
 use Result;
-use message_types::{SrdMessage, SrdPacket, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC}, srd_msg_id::SRD_CONFIRM_MSG_ID,
-                    SRD_SIGNATURE};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdConfirm {
@@ -28,10 +30,10 @@ impl SrdMessage for SrdConfirm {
         let flags = buffer.read_u16::<LittleEndian>()?;
 
         let mut cbt = [0u8; 32];
-        let mut mac = [0u8; 32];
-
         buffer.read_exact(&mut cbt)?;
-        buffer.read_exact(&mut mac)?;
+
+        let mut mac = [0u8; 32];
+        buffer.read_mac(&mut mac)?;
 
         Ok(SrdConfirm {
             signature,
@@ -119,7 +121,7 @@ impl SrdConfirm {
 
 #[cfg(test)]
 mod test {
-    use message_types::{SrdConfirm, SrdMessage, SrdPacket, srd_msg_id::SRD_CONFIRM_MSG_ID, SRD_SIGNATURE};
+    use message_types::{srd_msg_id::SRD_CONFIRM_MSG_ID, SrdConfirm, SrdMessage, SrdPacket, SRD_SIGNATURE};
     use std;
 
     #[test]
