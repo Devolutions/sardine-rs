@@ -13,8 +13,8 @@ use Result;
 use cipher::Cipher;
 
 use dh_params::SRD_DH_PARAMS;
-use message_types::*;
-use srd_blob::{Blob, SrdBlob};
+use messages::*;
+use blobs::{Blob, SrdBlob};
 use srd_errors::SrdError;
 
 cfg_if! {

@@ -4,8 +4,8 @@ use std::io::Read;
 use std::io::Write;
 
 use Result;
-use message_types::SrdMessage;
-use srd_blob::Blob;
+use messages::SrdMessage;
+use blobs::Blob;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LogonBlob {

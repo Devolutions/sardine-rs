@@ -5,7 +5,7 @@ use srd_errors::SrdError;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
-use message_types::SrdMessage;
+use messages::SrdMessage;
 
 pub trait SrdPacket: SrdMessage + Send + Sync {
     //Accessors

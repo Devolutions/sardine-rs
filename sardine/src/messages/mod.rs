@@ -21,13 +21,13 @@ pub mod srd_flags {
     pub const SRD_FLAG_CBT: u16 = 0x0002;
 }
 
-pub use message_types::srd_accept::SrdAccept;
-pub use message_types::srd_confirm::SrdConfirm;
-pub use message_types::srd_delegate::SrdDelegate;
-pub use message_types::srd_initiate::SrdInitiate;
-pub use message_types::srd_message::SrdMessage;
-pub use message_types::srd_offer::SrdOffer;
-pub use message_types::srd_packet::SrdPacket;
+pub use messages::srd_accept::SrdAccept;
+pub use messages::srd_confirm::SrdConfirm;
+pub use messages::srd_delegate::SrdDelegate;
+pub use messages::srd_initiate::SrdInitiate;
+pub use messages::srd_message::SrdMessage;
+pub use messages::srd_offer::SrdOffer;
+pub use messages::srd_packet::SrdPacket;
 
 fn expand_start<T: Default>(buffer: &mut Vec<T>, new_size: usize) {
     if new_size > buffer.len() {

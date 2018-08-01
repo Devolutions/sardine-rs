@@ -16,9 +16,9 @@ extern crate cfg_if;
 mod cipher;
 
 mod dh_params;
-mod message_types;
+mod messages;
 pub mod srd;
-pub mod srd_blob;
+pub mod blobs;
 mod srd_errors;
 
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;

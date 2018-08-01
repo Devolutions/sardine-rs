@@ -3,7 +3,7 @@ use std;
 use std::io::{Read, Write};
 
 use Result;
-use message_types::{expand_start, SrdMessage, SrdPacket, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
+use messages::{expand_start, SrdMessage, SrdPacket, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdOffer {
@@ -120,7 +120,7 @@ impl SrdOffer {
 
 #[cfg(test)]
 mod test {
-    use message_types::{SrdMessage, SrdOffer, SrdPacket, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
+    use messages::{SrdMessage, SrdOffer, SrdPacket, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE};
     use std;
 
     #[test]

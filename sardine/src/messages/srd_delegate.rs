@@ -3,11 +3,11 @@ use std;
 use std::io::{Read, Write};
 
 use cipher::Cipher;
-use message_types::{
+use messages::{
     srd_flags::SRD_FLAG_MAC, srd_message::ReadMac, srd_msg_id::SRD_DELEGATE_MSG_ID, SrdMessage, SrdPacket,
     SRD_SIGNATURE,
 };
-use srd_blob::SrdBlob;
+use blobs::SrdBlob;
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]

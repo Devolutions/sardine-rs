@@ -4,7 +4,7 @@ use std::io::Read;
 use std::io::Write;
 
 use Result;
-use message_types::SrdMessage;
+use messages::SrdMessage;
 
 use srd::fill_random;
 
@@ -125,8 +125,8 @@ pub trait Blob: SrdMessage {
 
 #[cfg(test)]
 mod test {
-    use message_types::SrdMessage;
-    use srd_blob::SrdBlob;
+    use messages::SrdMessage;
+    use blobs::SrdBlob;
     use std;
 
     #[test]

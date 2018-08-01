@@ -3,8 +3,8 @@ use std::io::Read;
 use std::io::Write;
 
 use Result;
-use message_types::SrdMessage;
-use srd_blob::Blob;
+use messages::SrdMessage;
+use blobs::Blob;
 use srd_errors::SrdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]

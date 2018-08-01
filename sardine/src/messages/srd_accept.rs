@@ -3,7 +3,7 @@ use std;
 use std::io::Read;
 use std::io::Write;
 
-use message_types::{
+use messages::{
     expand_start, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC}, srd_message::ReadMac, srd_msg_id::SRD_ACCEPT_MSG_ID,
     SrdMessage, SrdPacket, SRD_SIGNATURE,
 };
@@ -156,7 +156,7 @@ impl SrdAccept {
 
 #[cfg(test)]
 mod test {
-    use message_types::{srd_msg_id::SRD_ACCEPT_MSG_ID, SrdAccept, SrdMessage, SrdPacket, SRD_SIGNATURE};
+    use messages::{srd_msg_id::SRD_ACCEPT_MSG_ID, SrdAccept, SrdMessage, SrdPacket, SRD_SIGNATURE};
     use std;
 
     #[test]
