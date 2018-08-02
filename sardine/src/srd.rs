@@ -458,6 +458,11 @@ impl Srd {
         let input_msg = self.read_msg(input_data)?;
         match input_msg {
             SrdMessage::Offer(_hdr, offer) => {
+                // Verify server key_size
+                if offer.key_size() != self.key_size {
+                    return Err(SrdError::Proto("Key size received in offer message is not equal to key size sent to server".to_owned()));
+                }
+
                 let server_ciphers = Cipher::from_flags(offer.ciphers);
 
                 self.generator = BigUint::from_bytes_be(&offer.generator);
@@ -483,10 +488,8 @@ impl Srd {
                 let key_size = offer.key_size();
 
                 // Generate cbt
-                let cbt;
-
-                match self.cert_data {
-                    None => cbt = None,
+                let cbt = match self.cert_data {
+                    None => None,
                     Some(ref cert) => {
                         let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
 
@@ -495,9 +498,9 @@ impl Srd {
 
                         let mut cbt_data: [u8; 32] = [0u8; 32];
                         hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                        cbt = Some(cbt_data);
+                        Some(cbt_data)
                     }
-                }
+                };
 
                 // Accept
                 let mut common_ciphers = Vec::new();
@@ -531,7 +534,6 @@ impl Srd {
     // Server accept -> confirm
     fn server_authenticate_1(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Response
-
         let message = self.read_msg(input_data)?;
         match &message {
             SrdMessage::Accept(hdr, accept) => {
