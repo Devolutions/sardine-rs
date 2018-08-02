@@ -1,10 +1,10 @@
+mod srd_header;
 mod srd_accept;
 mod srd_confirm;
 mod srd_delegate;
 mod srd_initiate;
 mod srd_message;
 mod srd_offer;
-mod srd_packet;
 
 pub const SRD_SIGNATURE: u32 = 0x00445253;
 
@@ -21,13 +21,21 @@ pub mod srd_flags {
     pub const SRD_FLAG_CBT: u16 = 0x0002;
 }
 
+pub use messages::srd_header::SrdHeader;
 pub use messages::srd_accept::SrdAccept;
 pub use messages::srd_confirm::SrdConfirm;
 pub use messages::srd_delegate::SrdDelegate;
 pub use messages::srd_initiate::SrdInitiate;
+pub use messages::srd_message::Message;
 pub use messages::srd_message::SrdMessage;
 pub use messages::srd_offer::SrdOffer;
-pub use messages::srd_packet::SrdPacket;
+
+pub use messages::srd_initiate::new_srd_initiate_msg;
+pub use messages::srd_accept::new_srd_accept_msg;
+pub use messages::srd_offer::new_srd_offer_msg;
+pub use messages::srd_confirm::new_srd_confirm_msg;
+pub use messages::srd_delegate::new_srd_delegate_msg;
+
 
 fn expand_start<T: Default>(buffer: &mut Vec<T>, new_size: usize) {
     if new_size > buffer.len() {

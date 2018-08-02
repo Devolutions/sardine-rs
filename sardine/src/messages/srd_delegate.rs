@@ -1,121 +1,21 @@
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
-
 use cipher::Cipher;
+
 use messages::{
-    srd_flags::SRD_FLAG_MAC, srd_message::ReadMac, srd_msg_id::SRD_DELEGATE_MSG_ID, SrdMessage, SrdPacket,
-    SRD_SIGNATURE,
-};
+    srd_flags::SRD_FLAG_MAC, srd_message::ReadMac, Message, SrdMessage, SrdHeader, srd_msg_id};
 use blobs::SrdBlob;
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdDelegate {
-    signature: u32,
-    packet_type: u8,
-    seq_num: u8,
-    flags: u16,
     pub size: u32,
     pub encrypted_blob: Vec<u8>,
     mac: [u8; 32],
 }
 
-impl SrdMessage for SrdDelegate {
-    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let signature = buffer.read_u32::<LittleEndian>()?;
-        let packet_type = buffer.read_u8()?;
-        let seq_num = buffer.read_u8()?;
-        let flags = buffer.read_u16::<LittleEndian>()?;
-        let size = buffer.read_u32::<LittleEndian>()?;
-
-        let mut blob = vec![0u8; size as usize];
-        buffer.read_exact(&mut blob)?;
-
-        let mut mac = [0u8; 32];
-        buffer.read_mac(&mut mac)?;
-
-        Ok(SrdDelegate {
-            signature,
-            packet_type,
-            seq_num,
-            flags,
-            size,
-            encrypted_blob: blob,
-            mac,
-        })
-    }
-
-    fn write_to(&self, mut buffer: &mut Vec<u8>) -> Result<()> {
-        self.write_inner_buffer(&mut buffer)?;
-        buffer.write_all(&self.mac)?;
-        Ok(())
-    }
-}
-
-impl SrdPacket for SrdDelegate {
-    fn id(&self) -> u8 {
-        SRD_DELEGATE_MSG_ID
-    }
-
-    fn signature(&self) -> u32 {
-        self.signature
-    }
-
-    fn seq_num(&self) -> u8 {
-        self.seq_num
-    }
-
-    fn write_inner_buffer(&self, buffer: &mut Vec<u8>) -> Result<()> {
-        buffer.write_u32::<LittleEndian>(self.signature)?;
-        buffer.write_u8(self.packet_type)?;
-        buffer.write_u8(self.seq_num)?;
-        buffer.write_u16::<LittleEndian>(self.flags)?;
-        buffer.write_u32::<LittleEndian>(self.size)?;
-        buffer.write_all(&self.encrypted_blob)?;
-        Ok(())
-    }
-
-    fn mac(&self) -> Option<&[u8]> {
-        Some(&self.mac)
-    }
-
-    fn set_mac(&mut self, mac: &[u8]) {
-        self.mac.clone_from_slice(mac);
-    }
-}
-
 impl SrdDelegate {
-    pub fn new(
-        seq_num: u8,
-        srd_blob: &SrdBlob,
-        previous_messages: &[Box<SrdPacket>],
-        cipher: Cipher,
-        integrity_key: &[u8],
-        delegation_key: &[u8],
-        iv: &[u8],
-    ) -> Result<Self> {
-        let mut v_blob = Vec::new();
-        srd_blob.write_to(&mut v_blob)?;
-        let encrypted_blob = cipher.encrypt_data(&v_blob, delegation_key, iv)?;
-
-        let mut response = SrdDelegate {
-            signature: SRD_SIGNATURE,
-            packet_type: SRD_DELEGATE_MSG_ID,
-            seq_num,
-            flags: SRD_FLAG_MAC,
-            size: (encrypted_blob.len() as u32),
-            encrypted_blob,
-            mac: [0u8; 32],
-        };
-
-        response.compute_mac(&previous_messages, &integrity_key)?;
-        Ok(response)
-    }
-
     pub fn get_data(&self, cipher: Cipher, key: &[u8], iv: &[u8]) -> Result<SrdBlob> {
         let buffer = cipher.decrypt_data(&self.encrypted_blob, key, iv)?;
 
@@ -123,6 +23,60 @@ impl SrdDelegate {
         let srd_blob = SrdBlob::read_from(&mut cursor)?;
         Ok(srd_blob)
     }
+
+    pub fn mac(&self) -> &[u8] {
+        &self.mac
+    }
+
+    pub fn set_mac(&mut self, mac: &[u8]) {
+        self.mac.clone_from_slice(mac);
+    }
+}
+
+impl Message for SrdDelegate {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
+        Self: Sized {
+        let size = reader.read_u32::<LittleEndian>()?;
+
+        let mut blob = vec![0u8; size as usize];
+        reader.read_exact(&mut blob)?;
+
+        let mut mac = [0u8; 32];
+        reader.read_mac(&mut mac)?;
+
+        Ok(SrdDelegate {
+            size,
+            encrypted_blob: blob,
+            mac,
+        })
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W) -> Result<()> {
+        writer.write_u32::<LittleEndian>(self.size)?;
+        writer.write_all(&self.encrypted_blob)?;
+        writer.write_all(&self.mac)?;
+        Ok(())
+    }
+}
+
+pub fn new_srd_delegate_msg(seq_num: u8,
+                            srd_blob: &SrdBlob,
+                            cipher: Cipher,
+                            delegation_key: &[u8],
+                            iv: &[u8]) -> Result<SrdMessage> {
+    let mut v_blob = Vec::new();
+    srd_blob.write_to(&mut v_blob)?;
+    let encrypted_blob = cipher.encrypt_data(&v_blob, delegation_key, iv)?;
+
+    let hdr = SrdHeader::new(srd_msg_id::SRD_DELEGATE_MSG_ID, seq_num, SRD_FLAG_MAC);
+    let delegate = SrdDelegate {
+        size: (encrypted_blob.len() as u32),
+        encrypted_blob,
+        mac: [0u8; 32],
+    };
+
+//        response.compute_mac(&previous_messages, &integrity_key)?;
+    Ok(SrdMessage::Delegate(hdr, delegate))
 }
 
 //#[cfg(test)]

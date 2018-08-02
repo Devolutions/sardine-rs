@@ -1,89 +1,67 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std;
-
+use std::io::{Read, Write};
+use messages::{SrdMessage, Message, SrdHeader, srd_msg_id};
+use SrdError;
 use Result;
-use messages::{SrdMessage, SrdPacket, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdInitiate {
-    signature: u32,
-    packet_type: u8,
-    seq_num: u8,
-    flags: u16,
     ciphers: u32,
     key_size: u16,
     reserved: u16,
 }
 
-impl SrdMessage for SrdInitiate {
-    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        Ok(SrdInitiate {
-            signature: buffer.read_u32::<LittleEndian>()?,
-            packet_type: buffer.read_u8()?,
-            seq_num: buffer.read_u8()?,
-            flags: buffer.read_u16::<LittleEndian>()?,
-            ciphers: buffer.read_u32::<LittleEndian>()?,
-            key_size: buffer.read_u16::<LittleEndian>()?,
-            reserved: buffer.read_u16::<LittleEndian>()?,
-        })
-    }
-
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
-        buffer.write_u32::<LittleEndian>(self.signature)?;
-        buffer.write_u8(self.packet_type)?;
-        buffer.write_u8(self.seq_num)?;
-        buffer.write_u16::<LittleEndian>(self.flags)?;
-        buffer.write_u32::<LittleEndian>(self.ciphers)?;
-        buffer.write_u16::<LittleEndian>(self.key_size)?;
-        buffer.write_u16::<LittleEndian>(self.reserved)?;
-        Ok(())
-    }
-}
-
-impl SrdPacket for SrdInitiate {
-    fn id(&self) -> u8 {
-        SRD_INITIATE_MSG_ID
-    }
-
-    fn signature(&self) -> u32 {
-        self.signature
-    }
-
-    fn seq_num(&self) -> u8 {
-        self.seq_num
-    }
-}
-
 impl SrdInitiate {
-    pub fn new(seq_num: u8, ciphers: u32, key_size: u16) -> SrdInitiate {
-        SrdInitiate {
-            signature: SRD_SIGNATURE,
-            packet_type: SRD_INITIATE_MSG_ID,
-            seq_num,
-            flags: 0,
+    pub fn new(ciphers: u32, key_size: u16) -> Result<Self> {
+        match key_size {
+            256 | 512 | 1024 => {}
+            _ => return Err(SrdError::InvalidKeySize),
+        }
+
+        Ok(SrdInitiate {
             ciphers,
             key_size,
             reserved: 0,
-        }
+        })
     }
-
     pub fn key_size(&self) -> u16 {
         self.key_size
     }
 }
 
+impl Message for SrdInitiate {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
+        Self: Sized {
+        Ok(SrdInitiate {
+            ciphers: reader.read_u32::<LittleEndian>()?,
+            key_size: reader.read_u16::<LittleEndian>()?,
+            reserved: reader.read_u16::<LittleEndian>()?,
+        })
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W) -> Result<()> {
+        writer.write_u32::<LittleEndian>(self.ciphers)?;
+        writer.write_u16::<LittleEndian>(self.key_size)?;
+        writer.write_u16::<LittleEndian>(self.reserved)?;
+        Ok(())
+    }
+}
+
+pub fn new_srd_initiate_msg(seq_num: u8, ciphers: u32, key_size: u16) -> Result<SrdMessage> {
+    let hdr = SrdHeader::new(srd_msg_id::SRD_INITIATE_MSG_ID, seq_num, 0);
+    let initiate = SrdInitiate::new(ciphers, key_size)?;
+    Ok(SrdMessage::Initiate(hdr, initiate))
+}
+
 #[cfg(test)]
 mod test {
-    use messages::{SrdInitiate, SrdMessage, SrdPacket, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE};
     use std;
+    use messages::{Message, SrdMessage, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE, new_srd_initiate_msg};
 
     #[test]
     fn initiate_encoding() {
-        let msg = SrdInitiate::new(0, 0, 2);
-        assert_eq!(msg.id(), SRD_INITIATE_MSG_ID);
+        let msg = new_srd_initiate_msg(0, 0, 1024).unwrap();
+        assert_eq!(msg.msg_type(), SRD_INITIATE_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();
         match msg.write_to(&mut buffer) {
@@ -92,12 +70,12 @@ mod test {
         };
 
         let mut cursor = std::io::Cursor::new(buffer.as_slice());
-        match SrdInitiate::read_from(&mut cursor) {
-            Ok(x) => {
-                assert_eq!(x.signature, SRD_SIGNATURE);
-                assert_eq!(x, msg);
+        match SrdMessage::read_from(&mut cursor) {
+            Ok(msg_read) => {
+                assert_eq!(msg.signature(), SRD_SIGNATURE);
+                assert_eq!(msg_read, msg);
             }
             Err(_) => assert!(false),
-        };
+        }
     }
 }

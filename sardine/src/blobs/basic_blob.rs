@@ -1,9 +1,8 @@
-use std;
 use std::io::Read;
 use std::io::Write;
 
 use Result;
-use messages::SrdMessage;
+use messages::Message;
 use blobs::Blob;
 use srd_errors::SrdError;
 
@@ -26,13 +25,12 @@ impl Blob for BasicBlob {
         "Basic"
     }
 }
-impl SrdMessage for BasicBlob {
-    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
-    where
-        Self: Sized,
-    {
+
+impl Message for BasicBlob {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
+        Self: Sized {
         let mut str_buffer = Vec::new();
-        buffer.read_to_end(&mut str_buffer)?;
+        reader.read_to_end(&mut str_buffer)?;
         let full_str: String = str_buffer.iter().map(|c| *c as char).collect();
 
         let v: Vec<&str> = full_str.split(':').collect();
@@ -43,11 +41,37 @@ impl SrdMessage for BasicBlob {
 
         Ok(BasicBlob::new(v[0], v[1]))
     }
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
+
+    fn write_to<W: Write>(&self, writer: &mut W) -> Result<()> {
         let mut full_str = self.username.clone();
         full_str.push_str(":");
         full_str.push_str(&self.password);
-        buffer.write_all(&full_str.chars().map(|c| c as u8).collect::<Vec<u8>>())?;
+        writer.write_all(&full_str.chars().map(|c| c as u8).collect::<Vec<u8>>())?;
         Ok(())
     }
 }
+//impl SrdMessage for BasicBlob {
+//    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
+//    where
+//        Self: Sized,
+//    {
+//        let mut str_buffer = Vec::new();
+//        buffer.read_to_end(&mut str_buffer)?;
+//        let full_str: String = str_buffer.iter().map(|c| *c as char).collect();
+//
+//        let v: Vec<&str> = full_str.split(':').collect();
+//
+//        if v.len() != 2 {
+//            return Err(SrdError::BlobFormatError);
+//        }
+//
+//        Ok(BasicBlob::new(v[0], v[1]))
+//    }
+//    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
+//        let mut full_str = self.username.clone();
+//        full_str.push_str(":");
+//        full_str.push_str(&self.password);
+//        buffer.write_all(&full_str.chars().map(|c| c as u8).collect::<Vec<u8>>())?;
+//        Ok(())
+//    }
+//}

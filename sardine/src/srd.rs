@@ -137,7 +137,7 @@ pub struct Srd {
     seq_num: u8,
     state: u8,
 
-    messages: Vec<Box<SrdPacket>>,
+    messages: Vec<Vec<u8>>,
 
     cert_data: Option<Vec<u8>>,
 
@@ -289,7 +289,29 @@ impl Srd {
         }
     }
 
-    fn write_msg<T: SrdPacket>(&mut self, msg: &T, buffer: &mut Vec<u8>) -> Result<()> {
+    fn read_msg(&mut self, buffer: &[u8]) -> Result<SrdMessage>
+    {
+        let mut reader = std::io::Cursor::new(buffer);
+        let msg = SrdMessage::read_from(&mut reader)?;
+
+        if msg.seq_num() != self.seq_num {
+            return Err(SrdError::BadSequence);
+        }
+        self.seq_num += 1;
+
+        // Keep the message to calculate future mac value
+        self.messages.push(Vec::from(buffer));
+
+        // Verify mac value right now. We can't validate mac value for accept msg since we need information from
+        // the message to generate the integrety key. So only for this message type, it is verified later.
+        if msg.has_mac() && msg.msg_type() != srd_msg_id::SRD_ACCEPT_MSG_ID {
+            self.verify_mac(&msg)?;
+        }
+
+        Ok(msg)
+    }
+
+    fn write_msg(&mut self, msg: &mut SrdMessage, buffer: &mut Vec<u8>) -> Result<()> {
         if msg.signature() != SRD_SIGNATURE {
             return Err(SrdError::InvalidSignature);
         }
@@ -298,29 +320,65 @@ impl Srd {
             return Err(SrdError::BadSequence);
         }
 
+        // Keep the message to calculate future mac value. The message doesn't contain the MAC since it is not calculated yet
+        // It is not a problem since the all MAC are not included in MAC calculation
+        let mut v_temp = Vec::new();
+        msg.write_to(&mut v_temp)?;
+        self.messages.push(v_temp);
+
+        if msg.has_mac() {
+            msg.set_mac(&self.compute_mac()?).expect("Should never happen, has_mac returned true");
+        }
+
+        // Remove the last message to insert it again with the mac value (not really needed, just to keep exactly what it is sent.
+        self.messages.pop();
         msg.write_to(buffer)?;
+        self.messages.push(buffer.clone());
+
         self.seq_num += 1;
+
         Ok(())
     }
 
-    fn read_msg<T: SrdPacket>(&mut self, buffer: &[u8]) -> Result<T>
-    where
-        T: SrdPacket,
+    fn compute_mac(&self) -> Result<Vec<u8>> {
+        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+        hmac.input(&self.get_buffer_mac().map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?);
+        Ok(hmac.result().code().to_vec())
+    }
+
+    fn verify_mac(&self, msg: &SrdMessage) -> Result<()> {
+        if msg.has_mac() {
+            let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+            hmac.input(&self.get_buffer_mac().map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?);
+
+            if let Some(mac) = msg.mac() {
+                hmac.verify(mac).map_err(|_| SrdError::InvalidMac)
+            } else {
+                Err(SrdError::Internal("Msg should have a MAC but we can't get it".to_owned()))
+            }
+        } else {
+            // No mac in the message => Nothing to verify
+            Ok(())
+        }
+    }
+
+    fn get_buffer_mac(&self) -> Result<Vec<u8>>
     {
-        let mut reader = std::io::Cursor::new(buffer);
-        let packet = T::read_from(&mut reader)?;
+        let mut result = Vec::new();
 
-        if packet.signature() != SRD_SIGNATURE {
-            return Err(SrdError::InvalidSignature);
+        for message in &self.messages {
+            let mut clone = message.clone();
+            let hdr = SrdHeader::read_from(&mut clone.as_slice())?;
+            if hdr.has_mac() {
+                // Remove the mac
+                let slice = message.as_slice();
+                let last_index = slice.len() - 32;
+                result.write(&slice[0..last_index])?;
+            } else {
+                result.write(message.as_slice())?;
+            }
         }
-
-        if packet.seq_num() != self.seq_num {
-            return Err(SrdError::BadSequence);
-        }
-
-        self.seq_num += 1;
-
-        Ok(packet)
+        Ok(result)
     }
 
     // Client initiate
@@ -335,284 +393,287 @@ impl Srd {
         }
 
         // Negotiate
-        let out_packet = SrdInitiate::new(self.seq_num, cipher_flags, self.key_size);
-        self.write_msg(&out_packet, &mut output_data)?;
-
-        self.messages.push(Box::new(out_packet));
+        let mut out_msg = new_srd_initiate_msg(self.seq_num, cipher_flags, self.key_size)?;
+        self.write_msg(&mut out_msg, &mut output_data)?;
         Ok(())
     }
 
     // Server initiate -> offer
     fn server_authenticate_0(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
-        // Negotiate
-        let in_packet = self.read_msg::<SrdInitiate>(input_data)?;
-        self.set_key_size(in_packet.key_size())?;
-        self.find_dh_parameters()?;
+        let input_msg = self.read_msg(input_data)?;
 
-        let key_size = in_packet.key_size();
+        match input_msg {
+            SrdMessage::Initiate(_hdr, initiate) => {
+                // Negotiate
+                self.set_key_size(initiate.key_size())?;
+                self.find_dh_parameters()?;
 
-        self.messages.push(Box::new(in_packet));
+                let key_size = initiate.key_size();
 
-        let mut private_key_bytes = vec![0u8; self.key_size as usize];
+                let mut private_key_bytes = vec![0u8; self.key_size as usize];
+                fill_random(&mut private_key_bytes)?;
 
-        fill_random(&mut private_key_bytes)?;
+                // Challenge
+                self.private_key = BigUint::from_bytes_be(&private_key_bytes);
+                let public_key = self.generator.modpow(&self.private_key, &self.prime);
+                fill_random(&mut self.server_nonce)?;
 
-        // Challenge
-        self.private_key = BigUint::from_bytes_be(&private_key_bytes);
+                let mut cipher_flags = 0u32;
+                for c in &self.supported_ciphers {
+                    cipher_flags |= c.flag();
+                }
 
-        let public_key = self.generator.modpow(&self.private_key, &self.prime);
+                if cipher_flags == 0 {
+                    return Err(SrdError::Cipher);
+                }
 
-        fill_random(&mut self.server_nonce)?;
+                let mut out_msg = new_srd_offer_msg(
+                    self.seq_num,
+                    cipher_flags,
+                    key_size,
+                    self.generator.to_bytes_be(),
+                    self.prime.to_bytes_be(),
+                    public_key.to_bytes_be(),
+                    self.server_nonce,
+                );
 
-        let mut cipher_flags = 0u32;
-        for c in &self.supported_ciphers {
-            cipher_flags |= c.flag();
+                self.write_msg(&mut out_msg, &mut output_data)?;
+
+                Ok(())
+            }
+            _ => {
+                return Err(SrdError::BadSequence);
+            }
         }
-
-        if cipher_flags == 0 {
-            return Err(SrdError::Cipher);
-        }
-
-        let out_packet = SrdOffer::new(
-            self.seq_num,
-            cipher_flags,
-            key_size,
-            self.generator.to_bytes_be(),
-            self.prime.to_bytes_be(),
-            public_key.to_bytes_be(),
-            self.server_nonce,
-        );
-
-        self.write_msg(&out_packet, &mut output_data)?;
-
-        self.messages.push(Box::new(out_packet));
-
-        Ok(())
     }
 
     // Client offer -> accept
     fn client_authenticate_1(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         //Challenge
-        let in_packet = self.read_msg::<SrdOffer>(input_data)?;
+        let input_msg = self.read_msg(input_data)?;
+        match input_msg {
+            SrdMessage::Offer(_hdr, offer) => {
+                let server_ciphers = Cipher::from_flags(offer.ciphers);
 
-        let server_ciphers = Cipher::from_flags(in_packet.ciphers);
+                self.generator = BigUint::from_bytes_be(&offer.generator);
+                self.prime = BigUint::from_bytes_be(&offer.prime);
 
-        self.generator = BigUint::from_bytes_be(&in_packet.generator);
-        self.prime = BigUint::from_bytes_be(&in_packet.prime);
+                let mut private_key_bytes = vec![0u8; self.key_size as usize];
 
-        let mut private_key_bytes = vec![0u8; self.key_size as usize];
+                fill_random(&mut private_key_bytes)?;
 
-        fill_random(&mut private_key_bytes)?;
+                self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
-        self.private_key = BigUint::from_bytes_be(&private_key_bytes);
+                let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-        let public_key = self.generator.modpow(&self.private_key, &self.prime);
+                fill_random(&mut self.server_nonce)?;
 
-        fill_random(&mut self.server_nonce)?;
+                self.server_nonce = offer.nonce;
+                self.secret_key = BigUint::from_bytes_be(&offer.public_key)
+                    .modpow(&self.private_key, &self.prime)
+                    .to_bytes_be();
 
-        self.server_nonce = in_packet.nonce;
-        self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
-            .modpow(&self.private_key, &self.prime)
-            .to_bytes_be();
+                self.derive_keys();
 
-        self.derive_keys();
+                let key_size = offer.key_size();
 
-        let key_size = in_packet.key_size();
+                // Generate cbt
+                let cbt;
 
-        self.messages.push(Box::new(in_packet));
+                match self.cert_data {
+                    None => cbt = None,
+                    Some(ref cert) => {
+                        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
 
-        // Generate cbt
-        let cbt;
+                        hmac.input(&self.client_nonce);
+                        hmac.input(&cert);
 
-        match self.cert_data {
-            None => cbt = None,
-            Some(ref cert) => {
-                let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+                        let mut cbt_data: [u8; 32] = [0u8; 32];
+                        hmac.result().code().to_vec().write_all(&mut cbt_data)?;
+                        cbt = Some(cbt_data);
+                    }
+                }
 
-                hmac.input(&self.client_nonce);
-                hmac.input(&cert);
+                // Accept
+                let mut common_ciphers = Vec::new();
+                for c in &server_ciphers {
+                    if self.supported_ciphers.contains(c) {
+                        common_ciphers.push(*c);
+                    }
+                }
 
-                let mut cbt_data: [u8; 32] = [0u8; 32];
-                hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                cbt = Some(cbt_data);
+                self.cipher = Cipher::best_cipher(&common_ciphers)?;
+
+                let mut out_msg = new_srd_accept_msg(
+                    self.seq_num,
+                    self.cipher.flag(),
+                    key_size,
+                    public_key.to_bytes_be(),
+                    self.client_nonce,
+                    cbt,
+                );
+
+                self.write_msg(&mut out_msg, &mut output_data)?;
+
+                Ok(())
+            }
+            _ => {
+                return Err(SrdError::BadSequence);
             }
         }
-
-        // Accept
-        let mut common_ciphers = Vec::new();
-        for c in &server_ciphers {
-            if self.supported_ciphers.contains(c) {
-                common_ciphers.push(*c);
-            }
-        }
-
-        self.cipher = Cipher::best_cipher(&common_ciphers)?;
-
-        let out_packet = SrdAccept::new(
-            self.seq_num,
-            self.cipher.flag(),
-            key_size,
-            public_key.to_bytes_be(),
-            self.client_nonce,
-            cbt,
-            &self.messages,
-            &self.integrity_key,
-        )?;
-
-        self.write_msg(&out_packet, &mut output_data)?;
-
-        self.messages.push(Box::new(out_packet));
-
-        Ok(())
     }
 
     // Server accept -> confirm
     fn server_authenticate_1(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Response
-        let in_packet = self.read_msg::<SrdAccept>(input_data)?;
 
-        let chosen_cipher = Cipher::from_flags(in_packet.cipher);
+        let message = self.read_msg(input_data)?;
+        match &message {
+            SrdMessage::Accept(hdr, accept) => {
+                let chosen_cipher = Cipher::from_flags(accept.cipher);
 
-        if chosen_cipher.len() != 1 {
-            return Err(SrdError::Cipher);
-        }
-
-        self.cipher = *chosen_cipher.get(0).unwrap_or(&Cipher::XChaCha20);
-
-        if !self.supported_ciphers.contains(&self.cipher) {
-            return Err(SrdError::Cipher);
-        }
-
-        self.client_nonce = in_packet.nonce;
-
-        self.secret_key = BigUint::from_bytes_be(&in_packet.public_key)
-            .modpow(&self.private_key, &self.prime)
-            .to_bytes_be();
-
-        self.derive_keys();
-
-        in_packet.verify_mac(&self.messages, &self.integrity_key)?;
-
-        // Verify client cbt
-        match self.cert_data {
-            None => {
-                if in_packet.has_cbt() {
-                    return Err(SrdError::InvalidCert);
+                if chosen_cipher.len() != 1 {
+                    return Err(SrdError::Cipher);
                 }
+
+                self.cipher = *chosen_cipher.get(0).unwrap_or(&Cipher::XChaCha20);
+
+                if !self.supported_ciphers.contains(&self.cipher) {
+                    return Err(SrdError::Cipher);
+                }
+
+                self.client_nonce = accept.nonce;
+
+                self.secret_key = BigUint::from_bytes_be(&accept.public_key)
+                    .modpow(&self.private_key, &self.prime)
+                    .to_bytes_be();
+
+                self.derive_keys();
+
+                // Integrety_key has been generated. We has to verify the mac here.
+                self.verify_mac(&message)?;
+
+                // Verify client cbt
+                match self.cert_data {
+                    None => {
+                        if hdr.has_cbt() {
+                            return Err(SrdError::InvalidCert);
+                        }
+                    }
+                    Some(ref c) => {
+                        if !hdr.has_cbt() {
+                            return Err(SrdError::InvalidCert);
+                        }
+                        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+
+                        hmac.input(&self.client_nonce);
+                        hmac.input(&c);
+
+                        let mut cbt_data: [u8; 32] = [0u8; 32];
+                        hmac.result().code().to_vec().write_all(&mut cbt_data)?;
+                        if cbt_data != accept.cbt {
+                            return Err(SrdError::InvalidCbt);
+                        }
+                    }
+                }
+
+                // Confirm
+                // Generate server cbt
+                let cbt;
+                match self.cert_data {
+                    None => cbt = None,
+                    Some(ref cert) => {
+                        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+
+                        hmac.input(&self.server_nonce);
+                        hmac.input(&cert);
+
+                        let mut cbt_data: [u8; 32] = [0u8; 32];
+                        hmac.result().code().to_vec().write_all(&mut cbt_data)?;
+                        cbt = Some(cbt_data);
+                    }
+                }
+
+                let mut out_msg = new_srd_confirm_msg(self.seq_num, cbt);
+
+                self.write_msg(&mut out_msg, &mut output_data)?;
+                Ok(())
             }
-            Some(ref c) => {
-                if !in_packet.has_cbt() {
-                    return Err(SrdError::InvalidCert);
-                }
-                let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-
-                hmac.input(&self.client_nonce);
-                hmac.input(&c);
-
-                let mut cbt_data: [u8; 32] = [0u8; 32];
-                hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                if cbt_data != in_packet.cbt {
-                    return Err(SrdError::InvalidCbt);
-                }
+            _ => {
+                return Err(SrdError::BadSequence);
             }
         }
-
-        self.messages.push(Box::new(in_packet));
-
-        // Confirm
-        // Generate server cbt
-        let cbt;
-        match self.cert_data {
-            None => cbt = None,
-            Some(ref cert) => {
-                let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-
-                hmac.input(&self.server_nonce);
-                hmac.input(&cert);
-
-                let mut cbt_data: [u8; 32] = [0u8; 32];
-                hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                cbt = Some(cbt_data);
-            }
-        }
-
-        let out_packet = SrdConfirm::new(self.seq_num, cbt, &self.messages, &self.integrity_key)?;
-
-        self.write_msg(&out_packet, &mut output_data)?;
-
-        self.messages.push(Box::new(out_packet));
-
-        Ok(())
     }
 
     // Client confirm -> delegate
     fn client_authenticate_2(&mut self, input_data: &[u8], mut output_data: &mut Vec<u8>) -> Result<()> {
         // Confirm
-        let in_packet = self.read_msg::<SrdConfirm>(input_data)?;
+        let input_msg = self.read_msg(input_data)?;
+        match input_msg {
+            SrdMessage::Confirm(hdr, confirm) => {
+                // Verify Server cbt
+                match self.cert_data {
+                    None => {
+                        if hdr.has_cbt() {
+                            return Err(SrdError::InvalidCert);
+                        }
+                    }
+                    Some(ref c) => {
+                        if !hdr.has_cbt() {
+                            return Err(SrdError::InvalidCert);
+                        }
+                        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
 
-        in_packet.verify_mac(&self.messages, &self.integrity_key)?;
+                        hmac.input(&self.server_nonce);
+                        hmac.input(&c);
 
-        // Verify Server cbt
-        match self.cert_data {
-            None => {
-                if in_packet.has_cbt() {
-                    return Err(SrdError::InvalidCert);
+                        let mut cbt_data: [u8; 32] = [0u8; 32];
+                        hmac.result().code().to_vec().write_all(&mut cbt_data)?;
+                        if cbt_data != confirm.cbt {
+                            return Err(SrdError::InvalidCbt);
+                        }
+                    }
                 }
+
+                let mut out_msg =
+                    match self.blob {
+                        None => {
+                            return Err(SrdError::MissingBlob);
+                        }
+                        Some(ref b) => {
+                            new_srd_delegate_msg(
+                                self.seq_num,
+                                b,
+                                self.cipher,
+                                &self.delegation_key,
+                                &self.iv,
+                            )?
+                        }
+                    };
+
+                self.write_msg(&mut out_msg, &mut output_data)?;
+                Ok(())
             }
-            Some(ref c) => {
-                if !in_packet.has_cbt() {
-                    return Err(SrdError::InvalidCert);
-                }
-                let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-
-                hmac.input(&self.server_nonce);
-                hmac.input(&c);
-
-                let mut cbt_data: [u8; 32] = [0u8; 32];
-                hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                if cbt_data != in_packet.cbt {
-                    return Err(SrdError::InvalidCbt);
-                }
+            _ => {
+                return Err(SrdError::BadSequence);
             }
         }
-
-        self.messages.push(Box::new(in_packet));
-
-        let out_packet: SrdDelegate;
-        // Delegate
-        match self.blob {
-            None => {
-                return Err(SrdError::MissingBlob);
-            }
-            Some(ref b) => {
-                out_packet = SrdDelegate::new(
-                    self.seq_num,
-                    b,
-                    &self.messages,
-                    self.cipher,
-                    &self.integrity_key,
-                    &self.delegation_key,
-                    &self.iv,
-                )?;
-            }
-        }
-
-        self.write_msg(&out_packet, &mut output_data)?;
-        self.messages.push(Box::new(out_packet));
-        Ok(())
     }
 
     // Server delegate -> result
     fn server_authenticate_2(&mut self, input_data: &[u8]) -> Result<()> {
         // Receive delegate and verify credentials...
-        let in_packet = self.read_msg::<SrdDelegate>(input_data)?;
-        in_packet.verify_mac(&self.messages, &self.integrity_key)?;
+        let input_msg = self.read_msg(input_data)?;
+        match input_msg {
+            SrdMessage::Delegate(_hdr, delegate) => {
+                self.blob = Some(delegate.get_data(self.cipher, &self.delegation_key, &self.iv)?);
 
-        self.blob = Some(in_packet.get_data(self.cipher, &self.delegation_key, &self.iv)?);
-
-        self.messages.push(Box::new(in_packet));
-
-        Ok(())
+                Ok(())
+            }
+            _ => {
+                return Err(SrdError::BadSequence);
+            }
+        }
     }
 
     fn find_dh_parameters(&mut self) -> Result<()> {
