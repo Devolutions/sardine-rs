@@ -1,8 +1,8 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use messages::{srd_msg_id, Message, SrdHeader, SrdMessage};
 use std::io::{Read, Write};
-use messages::{SrdMessage, Message, SrdHeader, srd_msg_id};
-use SrdError;
 use Result;
+use SrdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdInitiate {
@@ -30,8 +30,10 @@ impl SrdInitiate {
 }
 
 impl Message for SrdInitiate {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         Ok(SrdInitiate {
             ciphers: reader.read_u32::<LittleEndian>()?,
             key_size: reader.read_u16::<LittleEndian>()?,
@@ -55,8 +57,8 @@ pub fn new_srd_initiate_msg(seq_num: u8, ciphers: u32, key_size: u16) -> Result<
 
 #[cfg(test)]
 mod test {
+    use messages::{new_srd_initiate_msg, srd_msg_id::SRD_INITIATE_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
     use std;
-    use messages::{Message, SrdMessage, srd_msg_id::SRD_INITIATE_MSG_ID, SRD_SIGNATURE, new_srd_initiate_msg};
 
     #[test]
     fn initiate_encoding() {

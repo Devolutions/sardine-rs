@@ -15,10 +15,10 @@ extern crate cfg_if;
 
 mod cipher;
 
+pub mod blobs;
 mod dh_params;
 mod messages;
 pub mod srd;
-pub mod blobs;
 mod srd_errors;
 
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;

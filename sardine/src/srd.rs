@@ -9,12 +9,12 @@ use num_bigint::BigUint;
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
 
-use Result;
 use cipher::Cipher;
+use Result;
 
+use blobs::{Blob, SrdBlob};
 use dh_params::SRD_DH_PARAMS;
 use messages::*;
-use blobs::{Blob, SrdBlob};
 use srd_errors::SrdError;
 
 cfg_if! {
@@ -289,8 +289,7 @@ impl Srd {
         }
     }
 
-    fn read_msg(&mut self, buffer: &[u8]) -> Result<SrdMessage>
-    {
+    fn read_msg(&mut self, buffer: &[u8]) -> Result<SrdMessage> {
         let mut reader = std::io::Cursor::new(buffer);
         let msg = SrdMessage::read_from(&mut reader)?;
 
@@ -305,7 +304,7 @@ impl Srd {
         // Verify mac value right now. We can't validate mac value for accept msg since we need information from
         // the message to generate the integrety key. So only for this message type, it is verified later.
         if msg.has_mac() && msg.msg_type() != srd_msg_id::SRD_ACCEPT_MSG_ID {
-            self.verify_mac(&msg)?;
+            self.validate_mac(&msg)?;
         }
 
         Ok(msg)
@@ -327,7 +326,8 @@ impl Srd {
         self.messages.push(v_temp);
 
         if msg.has_mac() {
-            msg.set_mac(&self.compute_mac()?).expect("Should never happen, has_mac returned true");
+            msg.set_mac(&self.compute_mac()?)
+                .expect("Should never happen, has_mac returned true");
         }
 
         // Remove the last message to insert it again with the mac value (not really needed, just to keep exactly what it is sent.
@@ -342,19 +342,23 @@ impl Srd {
 
     fn compute_mac(&self) -> Result<Vec<u8>> {
         let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-        hmac.input(&self.get_buffer_mac().map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?);
+        hmac.input(&self.get_mac_data()
+            .map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?);
         Ok(hmac.result().code().to_vec())
     }
 
-    fn verify_mac(&self, msg: &SrdMessage) -> Result<()> {
+    fn validate_mac(&self, msg: &SrdMessage) -> Result<()> {
         if msg.has_mac() {
             let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-            hmac.input(&self.get_buffer_mac().map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?);
+            hmac.input(&self.get_mac_data()
+                .map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?);
 
             if let Some(mac) = msg.mac() {
                 hmac.verify(mac).map_err(|_| SrdError::InvalidMac)
             } else {
-                Err(SrdError::Internal("Msg should have a MAC but we can't get it".to_owned()))
+                Err(SrdError::Internal(
+                    "Msg should have a MAC but we can't get it".to_owned(),
+                ))
             }
         } else {
             // No mac in the message => Nothing to verify
@@ -362,15 +366,15 @@ impl Srd {
         }
     }
 
-    fn get_buffer_mac(&self) -> Result<Vec<u8>>
-    {
+    // Send back all the data that has to be used to calculate the MAC. We used all messages, without all MAC fields
+    fn get_mac_data(&self) -> Result<Vec<u8>> {
         let mut result = Vec::new();
 
         for message in &self.messages {
             let mut clone = message.clone();
             let hdr = SrdHeader::read_from(&mut clone.as_slice())?;
             if hdr.has_mac() {
-                // Remove the mac
+                // Keep the message without the MAC at the end (32 bytes)
                 let slice = message.as_slice();
                 let last_index = slice.len() - 32;
                 result.write(&slice[0..last_index])?;
@@ -378,6 +382,7 @@ impl Srd {
                 result.write(message.as_slice())?;
             }
         }
+
         Ok(result)
     }
 
@@ -551,7 +556,7 @@ impl Srd {
                 self.derive_keys();
 
                 // Integrety_key has been generated. We has to verify the mac here.
-                self.verify_mac(&message)?;
+                self.validate_mac(&message)?;
 
                 // Verify client cbt
                 match self.cert_data {
@@ -635,21 +640,12 @@ impl Srd {
                     }
                 }
 
-                let mut out_msg =
-                    match self.blob {
-                        None => {
-                            return Err(SrdError::MissingBlob);
-                        }
-                        Some(ref b) => {
-                            new_srd_delegate_msg(
-                                self.seq_num,
-                                b,
-                                self.cipher,
-                                &self.delegation_key,
-                                &self.iv,
-                            )?
-                        }
-                    };
+                let mut out_msg = match self.blob {
+                    None => {
+                        return Err(SrdError::MissingBlob);
+                    }
+                    Some(ref b) => new_srd_delegate_msg(self.seq_num, b, self.cipher, &self.delegation_key, &self.iv)?,
+                };
 
                 self.write_msg(&mut out_msg, &mut output_data)?;
                 Ok(())

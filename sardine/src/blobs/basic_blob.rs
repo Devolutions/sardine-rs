@@ -1,10 +1,10 @@
 use std::io::Read;
 use std::io::Write;
 
-use Result;
-use messages::Message;
 use blobs::Blob;
+use messages::Message;
 use srd_errors::SrdError;
+use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BasicBlob {
@@ -27,8 +27,10 @@ impl Blob for BasicBlob {
 }
 
 impl Message for BasicBlob {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let mut str_buffer = Vec::new();
         reader.read_to_end(&mut str_buffer)?;
         let full_str: String = str_buffer.iter().map(|c| *c as char).collect();

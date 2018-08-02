@@ -1,6 +1,6 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use messages::{expand_start, srd_msg_id, Message, SrdHeader, SrdMessage};
 use std::io::{Read, Write};
-use messages::{expand_start, Message, SrdMessage, SrdHeader, srd_msg_id};
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -20,8 +20,10 @@ impl SrdOffer {
 }
 
 impl Message for SrdOffer {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let ciphers = reader.read_u32::<LittleEndian>()?;
         let key_size = reader.read_u16::<LittleEndian>()?;
 
@@ -57,13 +59,15 @@ impl Message for SrdOffer {
     }
 }
 
-pub fn new_srd_offer_msg(seq_num: u8,
-                         ciphers: u32,
-                         key_size: u16,
-                         mut generator: Vec<u8>,
-                         mut prime: Vec<u8>,
-                         mut public_key: Vec<u8>,
-                         nonce: [u8; 32], ) -> SrdMessage {
+pub fn new_srd_offer_msg(
+    seq_num: u8,
+    ciphers: u32,
+    key_size: u16,
+    mut generator: Vec<u8>,
+    mut prime: Vec<u8>,
+    mut public_key: Vec<u8>,
+    nonce: [u8; 32],
+) -> SrdMessage {
     expand_start(&mut generator, 2);
     expand_start(&mut prime, (key_size / 8) as usize);
     expand_start(&mut public_key, (key_size / 8) as usize);
@@ -80,11 +84,10 @@ pub fn new_srd_offer_msg(seq_num: u8,
     SrdMessage::Offer(hdr, offer)
 }
 
-
 #[cfg(test)]
 mod test {
+    use messages::{new_srd_offer_msg, srd_msg_id::SRD_OFFER_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
     use std;
-    use messages::{Message, SrdMessage, srd_msg_id::SRD_OFFER_MSG_ID, SRD_SIGNATURE, new_srd_offer_msg};
 
     #[test]
     fn offer_encoding() {

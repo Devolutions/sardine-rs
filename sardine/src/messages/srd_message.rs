@@ -1,12 +1,12 @@
+use messages::*;
 use srd_errors::SrdError;
 use std::io::{Read, Write};
-use messages::*;
 use Result;
 
 pub trait Message {
     fn read_from<R: Read>(reader: &mut R) -> Result<Self>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
     fn write_to<W: Write>(&self, writer: &mut W) -> Result<()>;
 }
 
@@ -117,7 +117,6 @@ impl SrdMessage {
             SrdMessage::Confirm(hdr, _confirm) => {
                 // MAC has to be set
                 hdr.validate_flags(true)?;
-
             }
 
             SrdMessage::Delegate(hdr, _delegate) => {
@@ -130,9 +129,10 @@ impl SrdMessage {
 }
 
 impl Message for SrdMessage {
-    fn read_from<R: Read>(mut reader: &mut R) -> Result<Self> where
-        Self: Sized {
-
+    fn read_from<R: Read>(mut reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let header = SrdHeader::read_from(&mut reader)?;
         match header.msg_type() {
             srd_msg_id::SRD_INITIATE_MSG_ID => {
@@ -155,9 +155,7 @@ impl Message for SrdMessage {
                 let delegate = SrdDelegate::read_from(&mut reader)?;
                 Ok(SrdMessage::Delegate(header, delegate).validate()?)
             }
-            _ => {
-                Err(SrdError::UnknownMsgType)
-            }
+            _ => Err(SrdError::UnknownMsgType),
         }
     }
 
@@ -213,18 +211,16 @@ pub trait ReadMac {
 //    }
 //}
 
-impl<T:Read> ReadMac for T {
+impl<T: Read> ReadMac for T {
     fn read_mac(&mut self, mac: &mut [u8]) -> Result<()> {
         let mut v = Vec::new();
         self.read_to_end(&mut v)?;
 
         if v.len() >= mac.len() {
             let len_to_remove = v.len() - mac.len();
-            ;
             mac.copy_from_slice(&v.split_off(len_to_remove));
             Ok(())
-        }
-        else {
+        } else {
             Err(SrdError::InvalidDataLength)
         }
     }

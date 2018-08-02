@@ -1,7 +1,7 @@
-use Result;
-use messages::{Message, SRD_SIGNATURE, srd_flags::*};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use messages::{srd_flags::*, Message, SRD_SIGNATURE};
 use std::io::{Read, Write};
+use Result;
 use SrdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -44,17 +44,25 @@ impl SrdHeader {
 
     pub fn validate_flags(&self, mac_expected: bool) -> Result<()> {
         if !self.has_mac() && mac_expected {
-            return Err(SrdError::Proto(format!("SRD_FLAG_MAC must be set in message type {}", self.msg_type)));
+            return Err(SrdError::Proto(format!(
+                "SRD_FLAG_MAC must be set in message type {}",
+                self.msg_type
+            )));
         } else if self.has_mac() && !mac_expected {
-            return Err(SrdError::Proto(format!("SRD_FLAG_MAC must not be set in message type {}", self.msg_type)));
+            return Err(SrdError::Proto(format!(
+                "SRD_FLAG_MAC must not be set in message type {}",
+                self.msg_type
+            )));
         }
         Ok(())
     }
 }
 
 impl Message for SrdHeader {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let signature = reader.read_u32::<LittleEndian>()?;
         if signature != SRD_SIGNATURE {
             return Err(SrdError::InvalidSignature);

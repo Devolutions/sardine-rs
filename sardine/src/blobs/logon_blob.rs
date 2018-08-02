@@ -2,9 +2,9 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Read;
 use std::io::Write;
 
-use Result;
-use messages::Message;
 use blobs::Blob;
+use messages::Message;
+use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LogonBlob {
@@ -36,8 +36,10 @@ impl Blob for LogonBlob {
 }
 
 impl Message for LogonBlob {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let username_length = reader.read_u16::<LittleEndian>()?;
         let password_length = reader.read_u16::<LittleEndian>()?;
 

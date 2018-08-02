@@ -2,8 +2,8 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Read;
 use std::io::Write;
 
-use Result;
 use messages::Message;
+use Result;
 
 use srd::fill_random;
 
@@ -65,8 +65,10 @@ impl SrdBlob {
 }
 
 impl Message for SrdBlob {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let type_size = reader.read_u16::<LittleEndian>()?;
         let type_padding = reader.read_u16::<LittleEndian>()?;
         let data_size = reader.read_u16::<LittleEndian>()?;
@@ -169,14 +171,14 @@ impl Message for SrdBlob {
 //    }
 //}
 
-pub trait Blob : Message {
+pub trait Blob: Message {
     fn blob_type() -> &'static str;
 }
 
 #[cfg(test)]
 mod test {
-    use messages::Message;
     use blobs::SrdBlob;
+    use messages::Message;
     use std;
 
     #[test]

@@ -1,7 +1,9 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{Read, Write};
 use messages::{
-    expand_start, Message, SrdMessage, SrdHeader, srd_msg_id, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC}, srd_message::ReadMac};
+    expand_start, srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC}, srd_message::ReadMac, srd_msg_id, Message, SrdHeader,
+    SrdMessage,
+};
+use std::io::{Read, Write};
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -26,8 +28,10 @@ impl SrdAccept {
 }
 
 impl Message for SrdAccept {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let cipher = reader.read_u32::<LittleEndian>()?;
         let key_size = reader.read_u16::<LittleEndian>()?;
         let reserved = reader.read_u16::<LittleEndian>()?;
@@ -67,12 +71,14 @@ impl Message for SrdAccept {
     }
 }
 
-pub fn new_srd_accept_msg(seq_num: u8,
-                          cipher: u32,
-                          key_size: u16,
-                          mut public_key: Vec<u8>,
-                          nonce: [u8; 32],
-                          cbt_opt: Option<[u8; 32]>) -> SrdMessage {
+pub fn new_srd_accept_msg(
+    seq_num: u8,
+    cipher: u32,
+    key_size: u16,
+    mut public_key: Vec<u8>,
+    nonce: [u8; 32],
+    cbt_opt: Option<[u8; 32]>,
+) -> SrdMessage {
     expand_start(&mut public_key, key_size as usize);
     let mut cbt = [0u8; 32];
     let mut flags = SRD_FLAG_MAC;
@@ -84,7 +90,6 @@ pub fn new_srd_accept_msg(seq_num: u8,
             cbt = c;
         }
     }
-
 
     let hdr = SrdHeader::new(srd_msg_id::SRD_ACCEPT_MSG_ID, seq_num, flags);
     let accept = SrdAccept {
@@ -100,21 +105,14 @@ pub fn new_srd_accept_msg(seq_num: u8,
     SrdMessage::Accept(hdr, accept)
 }
 
-
 #[cfg(test)]
 mod test {
+    use messages::{new_srd_accept_msg, srd_msg_id::SRD_ACCEPT_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
     use std;
-    use messages::{srd_msg_id::SRD_ACCEPT_MSG_ID, Message, SrdMessage, SRD_SIGNATURE, new_srd_accept_msg};
 
     #[test]
     fn accept_encoding() {
-        let msg = new_srd_accept_msg(
-            2,
-            0,
-            256,
-            vec![0u8; 256],
-            [0u8; 32],
-            Some([0u8; 32]));
+        let msg = new_srd_accept_msg(2, 0, 256, vec![0u8; 256], [0u8; 32], Some([0u8; 32]));
         assert_eq!(msg.msg_type(), SRD_ACCEPT_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();

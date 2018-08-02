@@ -1,11 +1,10 @@
-use std;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{Read, Write};
 use cipher::Cipher;
+use std;
+use std::io::{Read, Write};
 
-use messages::{
-    srd_flags::SRD_FLAG_MAC, srd_message::ReadMac, Message, SrdMessage, SrdHeader, srd_msg_id};
 use blobs::SrdBlob;
+use messages::{srd_flags::SRD_FLAG_MAC, srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage};
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -34,8 +33,10 @@ impl SrdDelegate {
 }
 
 impl Message for SrdDelegate {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let size = reader.read_u32::<LittleEndian>()?;
 
         let mut blob = vec![0u8; size as usize];
@@ -59,11 +60,13 @@ impl Message for SrdDelegate {
     }
 }
 
-pub fn new_srd_delegate_msg(seq_num: u8,
-                            srd_blob: &SrdBlob,
-                            cipher: Cipher,
-                            delegation_key: &[u8],
-                            iv: &[u8]) -> Result<SrdMessage> {
+pub fn new_srd_delegate_msg(
+    seq_num: u8,
+    srd_blob: &SrdBlob,
+    cipher: Cipher,
+    delegation_key: &[u8],
+    iv: &[u8],
+) -> Result<SrdMessage> {
     let mut v_blob = Vec::new();
     srd_blob.write_to(&mut v_blob)?;
     let encrypted_blob = cipher.encrypt_data(&v_blob, delegation_key, iv)?;
@@ -75,7 +78,7 @@ pub fn new_srd_delegate_msg(seq_num: u8,
         mac: [0u8; 32],
     };
 
-//        response.compute_mac(&previous_messages, &integrity_key)?;
+    //        response.compute_mac(&previous_messages, &integrity_key)?;
     Ok(SrdMessage::Delegate(hdr, delegate))
 }
 

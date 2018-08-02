@@ -2,7 +2,8 @@ use std::io::Read;
 use std::io::Write;
 
 use messages::{
-    srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC}, SrdMessage, SrdHeader, srd_msg_id, srd_message::ReadMac, Message};
+    srd_flags::{SRD_FLAG_CBT, SRD_FLAG_MAC}, srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage,
+};
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -22,18 +23,17 @@ impl SrdConfirm {
 }
 
 impl Message for SrdConfirm {
-    fn read_from<R: Read>(reader: &mut R) -> Result<Self> where
-        Self: Sized {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let mut cbt = [0u8; 32];
         reader.read_exact(&mut cbt)?;
 
         let mut mac = [0u8; 32];
         reader.read_mac(&mut mac)?;
 
-        Ok(SrdConfirm {
-            cbt,
-            mac,
-        })
+        Ok(SrdConfirm { cbt, mac })
     }
 
     fn write_to<W: Write>(&self, writer: &mut W) -> Result<()> {
@@ -55,19 +55,15 @@ pub fn new_srd_confirm_msg(seq_num: u8, cbt_opt: Option<[u8; 32]>) -> SrdMessage
         }
     }
     let hdr = SrdHeader::new(srd_msg_id::SRD_CONFIRM_MSG_ID, seq_num, flags);
-    let confirm = SrdConfirm {
-        cbt,
-        mac: [0u8; 32],
-    };
+    let confirm = SrdConfirm { cbt, mac: [0u8; 32] };
 
     SrdMessage::Confirm(hdr, confirm)
 }
 
-
 #[cfg(test)]
 mod test {
+    use messages::{new_srd_confirm_msg, srd_msg_id::SRD_CONFIRM_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
     use std;
-    use messages::{srd_msg_id::SRD_CONFIRM_MSG_ID, Message, SrdMessage, SRD_SIGNATURE, new_srd_confirm_msg};
 
     #[test]
     fn confirm_encoding() {
