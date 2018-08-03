@@ -1,11 +1,10 @@
-use std;
 use std::io::Read;
 use std::io::Write;
 
-use Result;
-use message_types::SrdMessage;
-use srd_blob::Blob;
+use blobs::Blob;
+use messages::Message;
 use srd_errors::SrdError;
+use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BasicBlob {
@@ -26,13 +25,14 @@ impl Blob for BasicBlob {
         "Basic"
     }
 }
-impl SrdMessage for BasicBlob {
-    fn read_from(buffer: &mut std::io::Cursor<&[u8]>) -> Result<Self>
+
+impl Message for BasicBlob {
+    fn read_from<R: Read>(reader: &mut R) -> Result<Self>
     where
         Self: Sized,
     {
         let mut str_buffer = Vec::new();
-        buffer.read_to_end(&mut str_buffer)?;
+        reader.read_to_end(&mut str_buffer)?;
         let full_str: String = str_buffer.iter().map(|c| *c as char).collect();
 
         let v: Vec<&str> = full_str.split(':').collect();
@@ -43,11 +43,12 @@ impl SrdMessage for BasicBlob {
 
         Ok(BasicBlob::new(v[0], v[1]))
     }
-    fn write_to(&self, buffer: &mut Vec<u8>) -> Result<()> {
+
+    fn write_to<W: Write>(&self, writer: &mut W) -> Result<()> {
         let mut full_str = self.username.clone();
         full_str.push_str(":");
         full_str.push_str(&self.password);
-        buffer.write_all(&full_str.chars().map(|c| c as u8).collect::<Vec<u8>>())?;
+        writer.write_all(&full_str.chars().map(|c| c as u8).collect::<Vec<u8>>())?;
         Ok(())
     }
 }

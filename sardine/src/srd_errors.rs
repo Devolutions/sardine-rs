@@ -27,6 +27,9 @@ pub enum SrdError {
     InvalidCstr,
     InvalidDataLength,
     InvalidSignature,
+    UnknownMsgType,
+    Proto(String),
+    Internal(String),
 }
 
 impl fmt::Display for SrdError {
@@ -48,6 +51,9 @@ impl fmt::Display for SrdError {
             &SrdError::InvalidCstr => write!(f, "String encoding error"),
             &SrdError::InvalidDataLength => write!(f, "Data length error"),
             &SrdError::InvalidSignature => write!(f, "Signature error"),
+            &SrdError::UnknownMsgType => write!(f, "Unknown message type"),
+            &SrdError::Proto(ref desc) => write!(f, "Protocol error: {}", desc),
+            &SrdError::Internal(ref desc) => write!(f, "Internal error: {}", desc),
         }
     }
 }
@@ -71,6 +77,9 @@ impl std::error::Error for SrdError {
             SrdError::InvalidCstr => "Username or password is not null-terminated",
             SrdError::InvalidDataLength => "The length of the data to be encrypted or decrypted is invalid",
             SrdError::InvalidSignature => "Packet signature is invalid",
+            SrdError::UnknownMsgType => "Unknown message type",
+            SrdError::Proto(_) => "Protocol error",
+            SrdError::Internal(_) => "Internal error",
         }
     }
 }

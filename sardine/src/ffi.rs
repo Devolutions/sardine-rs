@@ -3,7 +3,7 @@
 extern crate libc;
 
 use srd::Srd;
-use srd_blob::SrdBlob;
+use blobs::SrdBlob;
 use std;
 
 #[no_mangle]
