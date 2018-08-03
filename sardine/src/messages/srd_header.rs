@@ -13,7 +13,15 @@ pub struct SrdHeader {
 }
 
 impl SrdHeader {
-    pub fn new(msg_type: u8, seq_num: u8, flags: u16) -> Self {
+    pub fn new(msg_type: u8, seq_num: u8, add_cbt_flag: bool, add_mac_flag: bool) -> Self {
+        let mut flags = 0;
+        if add_cbt_flag {
+            flags |= SRD_FLAG_CBT;
+        }
+        if add_mac_flag {
+            flags |= SRD_FLAG_MAC;
+        }
+
         SrdHeader {
             signature: SRD_SIGNATURE,
             msg_type,
@@ -60,8 +68,8 @@ impl SrdHeader {
 
 impl Message for SrdHeader {
     fn read_from<R: Read>(reader: &mut R) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         let signature = reader.read_u32::<LittleEndian>()?;
         if signature != SRD_SIGNATURE {

@@ -4,7 +4,7 @@ use std;
 use std::io::{Read, Write};
 
 use blobs::SrdBlob;
-use messages::{srd_flags::SRD_FLAG_MAC, srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage};
+use messages::{srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage};
 use Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -34,8 +34,8 @@ impl SrdDelegate {
 
 impl Message for SrdDelegate {
     fn read_from<R: Read>(reader: &mut R) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         let size = reader.read_u32::<LittleEndian>()?;
 
@@ -62,6 +62,7 @@ impl Message for SrdDelegate {
 
 pub fn new_srd_delegate_msg(
     seq_num: u8,
+    use_cbt: bool,
     srd_blob: &SrdBlob,
     cipher: Cipher,
     delegation_key: &[u8],
@@ -71,7 +72,7 @@ pub fn new_srd_delegate_msg(
     srd_blob.write_to(&mut v_blob)?;
     let encrypted_blob = cipher.encrypt_data(&v_blob, delegation_key, iv)?;
 
-    let hdr = SrdHeader::new(srd_msg_id::SRD_DELEGATE_MSG_ID, seq_num, SRD_FLAG_MAC);
+    let hdr = SrdHeader::new(srd_msg_id::SRD_DELEGATE_MSG_ID, seq_num, use_cbt, true);
     let delegate = SrdDelegate {
         size: (encrypted_blob.len() as u32),
         encrypted_blob,

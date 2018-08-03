@@ -5,8 +5,8 @@ use Result;
 
 pub trait Message {
     fn read_from<R: Read>(reader: &mut R) -> Result<Self>
-    where
-        Self: Sized;
+        where
+            Self: Sized;
     fn write_to<W: Write>(&self, writer: &mut W) -> Result<()>;
 }
 
@@ -51,7 +51,7 @@ impl SrdMessage {
         }
     }
 
-    pub fn _has_cbt(&self) -> bool {
+    pub fn has_cbt(&self) -> bool {
         match self {
             SrdMessage::Initiate(hdr, _) => hdr.has_cbt(),
             SrdMessage::Offer(hdr, _) => hdr.has_cbt(),
@@ -130,8 +130,8 @@ impl SrdMessage {
 
 impl Message for SrdMessage {
     fn read_from<R: Read>(mut reader: &mut R) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         let header = SrdHeader::read_from(&mut reader)?;
         match header.msg_type() {

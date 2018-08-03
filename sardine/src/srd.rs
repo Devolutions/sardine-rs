@@ -140,6 +140,7 @@ pub struct Srd {
     messages: Vec<Vec<u8>>,
 
     cert_data: Option<Vec<u8>>,
+    use_cbt: bool,
 
     client_nonce: [u8; 32],
     server_nonce: [u8; 32],
@@ -188,6 +189,7 @@ impl Srd {
             messages: Vec::new(),
 
             cert_data: None,
+            use_cbt: false,
 
             client_nonce: [0; 32],
             server_nonce: [0; 32],
@@ -239,6 +241,7 @@ impl Srd {
 
     fn _set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
         self.cert_data = Some(buffer);
+        self.use_cbt = true;
         Ok(())
     }
 
@@ -307,6 +310,11 @@ impl Srd {
             self.validate_mac(&msg)?;
         }
 
+        // If CBT flag is set, we has to use CBT
+        if msg.has_cbt() && !self.use_cbt {
+            return Err(SrdError::InvalidCert);
+        }
+
         Ok(msg)
     }
 
@@ -320,10 +328,10 @@ impl Srd {
         }
 
         // Keep the message to calculate future mac value. The message doesn't contain the MAC since it is not calculated yet
-        // It is not a problem since the all MAC are not included in MAC calculation
-        let mut v_temp = Vec::new();
-        msg.write_to(&mut v_temp)?;
-        self.messages.push(v_temp);
+        // It is not a problem since MAC are not included in MAC calculation
+        let mut v = Vec::new();
+        msg.write_to(&mut v)?;
+        self.messages.push(v);
 
         if msg.has_mac() {
             msg.set_mac(&self.compute_mac()?)
@@ -335,9 +343,28 @@ impl Srd {
         msg.write_to(buffer)?;
         self.messages.push(buffer.clone());
 
+        println!("Msg sent : {:?}", msg);
         self.seq_num += 1;
 
         Ok(())
+    }
+
+    fn compute_cbt(&self, nonce: &[u8; 32]) -> Result<[u8; 32]> {
+        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+
+        hmac.input(nonce);
+        if self.use_cbt {
+            if let Some(ref cert_data) = self.cert_data {
+                hmac.input(&cert_data);
+            } else {
+                return Err(SrdError::InvalidCert);
+            }
+        }
+
+        let mut cbt_data = [0u8; 32];
+        cbt_data.as_mut().write_all(&hmac.result().code().to_vec())?;
+
+        Ok(cbt_data)
     }
 
     fn compute_mac(&self) -> Result<Vec<u8>> {
@@ -398,7 +425,7 @@ impl Srd {
         }
 
         // Negotiate
-        let mut out_msg = new_srd_initiate_msg(self.seq_num, cipher_flags, self.key_size)?;
+        let mut out_msg = new_srd_initiate_msg(self.seq_num, self.use_cbt, cipher_flags, self.key_size)?;
         self.write_msg(&mut out_msg, &mut output_data)?;
         Ok(())
     }
@@ -408,7 +435,9 @@ impl Srd {
         let input_msg = self.read_msg(input_data)?;
 
         match input_msg {
-            SrdMessage::Initiate(_hdr, initiate) => {
+            SrdMessage::Initiate(hdr, initiate) => {
+                self.use_cbt = hdr.has_cbt();
+
                 // Negotiate
                 self.set_key_size(initiate.key_size())?;
                 self.find_dh_parameters()?;
@@ -434,6 +463,7 @@ impl Srd {
 
                 let mut out_msg = new_srd_offer_msg(
                     self.seq_num,
+                    self.use_cbt,
                     cipher_flags,
                     key_size,
                     self.generator.to_bytes_be(),
@@ -476,7 +506,7 @@ impl Srd {
 
                 let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-                fill_random(&mut self.server_nonce)?;
+                fill_random(&mut self.client_nonce)?;
 
                 self.server_nonce = offer.nonce;
                 self.secret_key = BigUint::from_bytes_be(&offer.public_key)
@@ -488,19 +518,7 @@ impl Srd {
                 let key_size = offer.key_size();
 
                 // Generate cbt
-                let cbt = match self.cert_data {
-                    None => None,
-                    Some(ref cert) => {
-                        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-
-                        hmac.input(&self.client_nonce);
-                        hmac.input(&cert);
-
-                        let mut cbt_data: [u8; 32] = [0u8; 32];
-                        hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                        Some(cbt_data)
-                    }
-                };
+                let cbt_data = self.compute_cbt(&self.client_nonce)?;
 
                 // Accept
                 let mut common_ciphers = Vec::new();
@@ -514,11 +532,12 @@ impl Srd {
 
                 let mut out_msg = new_srd_accept_msg(
                     self.seq_num,
+                    self.use_cbt,
                     self.cipher.flag(),
                     key_size,
                     public_key.to_bytes_be(),
                     self.client_nonce,
-                    cbt,
+                    cbt_data,
                 );
 
                 self.write_msg(&mut out_msg, &mut output_data)?;
@@ -536,7 +555,7 @@ impl Srd {
         // Response
         let message = self.read_msg(input_data)?;
         match &message {
-            SrdMessage::Accept(hdr, accept) => {
+            SrdMessage::Accept(_hdr, accept) => {
                 let chosen_cipher = Cipher::from_flags(accept.cipher);
 
                 if chosen_cipher.len() != 1 {
@@ -561,47 +580,15 @@ impl Srd {
                 self.validate_mac(&message)?;
 
                 // Verify client cbt
-                match self.cert_data {
-                    None => {
-                        if hdr.has_cbt() {
-                            return Err(SrdError::InvalidCert);
-                        }
-                    }
-                    Some(ref c) => {
-                        if !hdr.has_cbt() {
-                            return Err(SrdError::InvalidCert);
-                        }
-                        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-
-                        hmac.input(&self.client_nonce);
-                        hmac.input(&c);
-
-                        let mut cbt_data: [u8; 32] = [0u8; 32];
-                        hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                        if cbt_data != accept.cbt {
-                            return Err(SrdError::InvalidCbt);
-                        }
-                    }
+                let cbt_data = self.compute_cbt(&self.client_nonce)?;
+                if cbt_data != accept.cbt {
+                    return Err(SrdError::InvalidCbt);
                 }
 
                 // Confirm
                 // Generate server cbt
-                let cbt;
-                match self.cert_data {
-                    None => cbt = None,
-                    Some(ref cert) => {
-                        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-
-                        hmac.input(&self.server_nonce);
-                        hmac.input(&cert);
-
-                        let mut cbt_data: [u8; 32] = [0u8; 32];
-                        hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                        cbt = Some(cbt_data);
-                    }
-                }
-
-                let mut out_msg = new_srd_confirm_msg(self.seq_num, cbt);
+                let cbt_data = self.compute_cbt(&self.server_nonce)?;
+                let mut out_msg = new_srd_confirm_msg(self.seq_num, self.use_cbt, cbt_data);
 
                 self.write_msg(&mut out_msg, &mut output_data)?;
                 Ok(())
@@ -617,36 +604,19 @@ impl Srd {
         // Confirm
         let input_msg = self.read_msg(input_data)?;
         match input_msg {
-            SrdMessage::Confirm(hdr, confirm) => {
+            SrdMessage::Confirm(_hdr, confirm) => {
                 // Verify Server cbt
-                match self.cert_data {
-                    None => {
-                        if hdr.has_cbt() {
-                            return Err(SrdError::InvalidCert);
-                        }
-                    }
-                    Some(ref c) => {
-                        if !hdr.has_cbt() {
-                            return Err(SrdError::InvalidCert);
-                        }
-                        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-
-                        hmac.input(&self.server_nonce);
-                        hmac.input(&c);
-
-                        let mut cbt_data: [u8; 32] = [0u8; 32];
-                        hmac.result().code().to_vec().write_all(&mut cbt_data)?;
-                        if cbt_data != confirm.cbt {
-                            return Err(SrdError::InvalidCbt);
-                        }
-                    }
+                let cbt_data = self.compute_cbt(&self.server_nonce)?;
+                if cbt_data != confirm.cbt {
+                    return Err(SrdError::InvalidCbt);
                 }
 
+                // Build Delegate message
                 let mut out_msg = match self.blob {
                     None => {
                         return Err(SrdError::MissingBlob);
                     }
-                    Some(ref b) => new_srd_delegate_msg(self.seq_num, b, self.cipher, &self.delegation_key, &self.iv)?,
+                    Some(ref b) => new_srd_delegate_msg(self.seq_num, self.use_cbt, b, self.cipher, &self.delegation_key, &self.iv)?,
                 };
 
                 self.write_msg(&mut out_msg, &mut output_data)?;

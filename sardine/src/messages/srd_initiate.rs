@@ -31,8 +31,8 @@ impl SrdInitiate {
 
 impl Message for SrdInitiate {
     fn read_from<R: Read>(reader: &mut R) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         Ok(SrdInitiate {
             ciphers: reader.read_u32::<LittleEndian>()?,
@@ -49,8 +49,8 @@ impl Message for SrdInitiate {
     }
 }
 
-pub fn new_srd_initiate_msg(seq_num: u8, ciphers: u32, key_size: u16) -> Result<SrdMessage> {
-    let hdr = SrdHeader::new(srd_msg_id::SRD_INITIATE_MSG_ID, seq_num, 0);
+pub fn new_srd_initiate_msg(seq_num: u8, use_cbt: bool, ciphers: u32, key_size: u16) -> Result<SrdMessage> {
+    let hdr = SrdHeader::new(srd_msg_id::SRD_INITIATE_MSG_ID, seq_num, use_cbt, false);
     let initiate = SrdInitiate::new(ciphers, key_size)?;
     Ok(SrdMessage::Initiate(hdr, initiate))
 }
@@ -62,7 +62,7 @@ mod test {
 
     #[test]
     fn initiate_encoding() {
-        let msg = new_srd_initiate_msg(0, 0, 1024).unwrap();
+        let msg = new_srd_initiate_msg(0, true, 0, 1024).unwrap();
         assert_eq!(msg.msg_type(), SRD_INITIATE_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();

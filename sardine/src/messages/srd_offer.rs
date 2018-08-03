@@ -21,8 +21,8 @@ impl SrdOffer {
 
 impl Message for SrdOffer {
     fn read_from<R: Read>(reader: &mut R) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         let ciphers = reader.read_u32::<LittleEndian>()?;
         let key_size = reader.read_u16::<LittleEndian>()?;
@@ -61,6 +61,7 @@ impl Message for SrdOffer {
 
 pub fn new_srd_offer_msg(
     seq_num: u8,
+    use_cbt: bool,
     ciphers: u32,
     key_size: u16,
     mut generator: Vec<u8>,
@@ -72,7 +73,7 @@ pub fn new_srd_offer_msg(
     expand_start(&mut prime, (key_size / 8) as usize);
     expand_start(&mut public_key, (key_size / 8) as usize);
 
-    let hdr = SrdHeader::new(srd_msg_id::SRD_OFFER_MSG_ID, seq_num, 0);
+    let hdr = SrdHeader::new(srd_msg_id::SRD_OFFER_MSG_ID, seq_num, use_cbt, false);
     let offer = SrdOffer {
         ciphers,
         key_size,
@@ -91,7 +92,7 @@ mod test {
 
     #[test]
     fn offer_encoding() {
-        let msg = new_srd_offer_msg(1, 0, 256, vec![0, 0], vec![0u8; 256], vec![0u8; 256], [0u8; 32]);
+        let msg = new_srd_offer_msg(1, true, 0, 256, vec![0, 0], vec![0u8; 256], vec![0u8; 256], [0u8; 32]);
         assert_eq!(msg.msg_type(), SRD_OFFER_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();
