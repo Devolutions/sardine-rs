@@ -310,7 +310,7 @@ impl Srd {
             self.validate_mac(&msg)?;
         }
 
-        // If CBT flag is set, we has to use CBT
+        // If CBT flag is set, we have to use CBT
         if msg.has_cbt() && !self.use_cbt {
             return Err(SrdError::InvalidCert);
         }
