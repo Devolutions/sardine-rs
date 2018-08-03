@@ -343,7 +343,6 @@ impl Srd {
         msg.write_to(buffer)?;
         self.messages.push(buffer.clone());
 
-        println!("Msg sent : {:?}", msg);
         self.seq_num += 1;
 
         Ok(())
