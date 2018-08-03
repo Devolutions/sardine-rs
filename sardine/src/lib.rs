@@ -1,4 +1,5 @@
-#![cfg_attr(feature = "wasm", feature(proc_macro, wasm_custom_section, wasm_import_module))]
+#![feature(use_extern_macros)]
+#![cfg_attr(feature = "wasm", feature(wasm_custom_section, wasm_import_module))]
 extern crate byteorder;
 extern crate hmac;
 extern crate num_bigint;
@@ -40,6 +41,7 @@ cfg_if! {
 #[cfg(test)]
 mod tests;
 
+#[allow(dead_code)]
 #[cfg(feature = "wasm")]
 fn main() {}
 
