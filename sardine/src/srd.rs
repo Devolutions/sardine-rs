@@ -47,30 +47,19 @@ cfg_if! {
 
             pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
                 let mut output_data = Vec::new();
-                self._authenticate(&input_data, &mut output_data).unwrap();
+                let res_code = self._authenticate(&input_data, &mut output_data).map(|res| {
+                        if res {
+                            1
+                        }
+                        else {
+                            0
+                        }
+                    }).unwrap_or(-1);
+
                 SrdJsResult {
                     output_data,
-                    res_code: -1,
+                    res_code,
                 }
-                /*match self._authenticate(&input_data, &mut output_data) {
-                    Err(_) => SrdJsResult {
-                        output_data,
-                        res_code: -1,
-                    },
-                    Ok(b) => {
-                        if b {
-                            SrdJsResult {
-                                output_data,
-                                res_code: 0,
-                            }
-                        } else {
-                            SrdJsResult {
-                                output_data,
-                                res_code: 1,
-                            }
-                        }
-                    }
-                }*/
             }
 
             pub fn get_delegation_key(&self) -> Vec<u8> {
@@ -82,7 +71,7 @@ cfg_if! {
             }
 
             pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
-                self._set_cert_data(buffer).unwrap();
+                let _ = self._set_cert_data(buffer);
             }
         }
     }
@@ -261,8 +250,7 @@ impl Srd {
     }
 
     pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
-        if self.blob.is_some() {
-            let blob = self.blob.as_ref().unwrap();
+        if let Some(ref blob) = self.blob {
             if blob.blob_type() == T::blob_type() {
                 let mut cursor = std::io::Cursor::new(blob.data());
                 return Ok(Some(T::read_from(&mut cursor)?));

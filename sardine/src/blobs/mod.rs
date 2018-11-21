@@ -28,7 +28,7 @@ impl SrdBlob {
     pub fn new_logon(username: &str, password: &str) -> SrdBlob {
         let logon = LogonBlob::new(username, password);
         let mut data = Vec::new();
-        logon.write_to(&mut data).unwrap();
+        let _ = logon.write_to(&mut data);
         SrdBlob {
             blob_type: "Logon".to_string(),
             data,
