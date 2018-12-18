@@ -33,7 +33,7 @@ impl Message for BasicBlob {
     {
         let mut str_buffer = Vec::new();
         reader.read_to_end(&mut str_buffer)?;
-        let full_str: String = str_buffer.iter().map(|c| *c as char).collect();
+        let full_str = String::from_utf8_lossy(str_buffer.as_slice()).to_string();
 
         let v: Vec<&str> = full_str.split(':').collect();
 
@@ -48,7 +48,7 @@ impl Message for BasicBlob {
         let mut full_str = self.username.clone();
         full_str.push_str(":");
         full_str.push_str(&self.password);
-        writer.write_all(&full_str.chars().map(|c| c as u8).collect::<Vec<u8>>())?;
+        writer.write_all(full_str.as_bytes())?;
         Ok(())
     }
 }

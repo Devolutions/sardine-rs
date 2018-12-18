@@ -15,8 +15,8 @@ pub use self::logon_blob::LogonBlob;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdBlob {
     blob_type: String,
     data: Vec<u8>,
