@@ -46,12 +46,12 @@ impl Message for LogonBlob {
         let mut username_buf = vec![0u8; username_length as usize];
         reader.read_exact(&mut username_buf)?;
         reader.read_u8()?;
-        let username: String = username_buf.iter().map(|c| *c as char).collect();
+        let username: String = String::from_utf8_lossy(username_buf.as_slice()).to_string();
 
         let mut password_buf = vec![0u8; password_length as usize];
         reader.read_exact(&mut password_buf)?;
         reader.read_u8()?;
-        let password: String = password_buf.iter().map(|c| *c as char).collect();
+        let password: String = String::from_utf8_lossy(password_buf.as_slice()).to_string();
 
         Ok(LogonBlob::new(&username, &password))
     }
@@ -59,9 +59,9 @@ impl Message for LogonBlob {
     fn write_to<W: Write>(&self, writer: &mut W) -> Result<()> {
         writer.write_u16::<LittleEndian>(self.username.len() as u16)?;
         writer.write_u16::<LittleEndian>(self.password.len() as u16)?;
-        writer.write_all(&self.username.chars().map(|c| c as u8).collect::<Vec<u8>>())?;
+        writer.write_all(self.username.as_bytes())?;
         writer.write_u8(0u8)?;
-        writer.write_all(&self.password.chars().map(|c| c as u8).collect::<Vec<u8>>())?;
+        writer.write_all(self.password.as_bytes())?;
         writer.write_u8(0u8)?;
         Ok(())
     }

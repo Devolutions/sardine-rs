@@ -1,4 +1,4 @@
-use blobs::BasicBlob;
+use blobs::{BasicBlob, LogonBlob};
 use cipher::Cipher;
 use srd::Srd;
 
@@ -55,7 +55,7 @@ static TEST_CERT_DATA: &'static [u8] = b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x0
 //const TEST_PASSWORD: &'static str = "Dummy123";
 
 #[test]
-fn good_login() {
+fn good_login_basic_blob() {
     let mut client: Srd = Srd::new(false);
     let mut server: Srd = Srd::new(true);
 
@@ -78,7 +78,7 @@ fn good_login() {
     client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
     server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
 
-    let basic_blob = BasicBlob::new("fdubois", "123456");
+    let basic_blob = BasicBlob::new("fdubois", "1234567ßẞ");
     client.set_blob(basic_blob.clone()).unwrap();
 
     let mut client_status: bool = false;
@@ -100,4 +100,52 @@ fn good_login() {
     assert!(server_status);
 
     assert_eq!(server.get_blob::<BasicBlob>().unwrap().unwrap(), basic_blob);
+}
+
+#[test]
+fn good_login_logon_blob() {
+    let mut client: Srd = Srd::new(false);
+    let mut server: Srd = Srd::new(true);
+
+    let mut in_data: Vec<u8> = Vec::new();
+    let mut out_data: Vec<u8> = Vec::new();
+
+    let mut client_ciphers = Vec::new();
+    //client_ciphers.push(Cipher::AES256);
+    client_ciphers.push(Cipher::ChaCha20);
+    client_ciphers.push(Cipher::XChaCha20);
+
+    let mut server_ciphers = Vec::new();
+    server_ciphers.push(Cipher::ChaCha20);
+    server_ciphers.push(Cipher::XChaCha20);
+
+    client.set_ciphers(client_ciphers).unwrap();
+    server.set_ciphers(server_ciphers).unwrap();
+
+    // Commenting out those two lines should work without cbt verification
+    client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
+    server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
+
+    let logon_blob = LogonBlob::new("fdubois", "1234567ßẞ");
+    client.set_blob(logon_blob.clone()).unwrap();
+
+    let mut client_status: bool = false;
+    let mut server_status: bool = false;
+
+    while !(client_status && server_status) {
+        println!("Client");
+        client_status = client.authenticate(&in_data, &mut out_data).unwrap();
+        in_data = out_data;
+        out_data = Vec::new();
+
+        println!("Server");
+        server_status = server.authenticate(&in_data, &mut out_data).unwrap();
+        in_data = out_data;
+        out_data = Vec::new();
+    }
+
+    assert!(client_status);
+    assert!(server_status);
+
+    assert_eq!(server.get_blob::<LogonBlob>().unwrap().unwrap(), logon_blob);
 }
