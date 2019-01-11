@@ -12,6 +12,6 @@ authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
 
 [dependencies]
 base64 = "0.6"
-hyperx = "0.12"
+hyperx = "~0.13.1"
 log = "0.4.1"
 uuid = { version = "0.6", features = ["v4"] }

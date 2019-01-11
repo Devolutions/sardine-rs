@@ -1,4 +1,4 @@
-#![feature(use_extern_macros)]
+#![cfg_attr(feature = "wasm", feature(use_extern_macros))]
 extern crate byteorder;
 extern crate hmac;
 extern crate num_bigint;
