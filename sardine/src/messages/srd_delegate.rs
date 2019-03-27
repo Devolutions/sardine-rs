@@ -5,7 +5,10 @@ use std::io::{Read, Write};
 
 use blobs::SrdBlob;
 use messages::{srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage};
+use srd_errors::SrdError;
 use Result;
+
+const DELEGATE_MESSAGE_SIZE_LIMIT: u32 = 16 * 1024; // Limit DELEGATE messages to 16 Kb.
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdDelegate {
@@ -38,6 +41,10 @@ impl Message for SrdDelegate {
             Self: Sized,
     {
         let size = reader.read_u32::<LittleEndian>()?;
+
+        if size > DELEGATE_MESSAGE_SIZE_LIMIT {
+            return Err(SrdError::InvalidDataLength);
+        }
 
         let mut blob = vec![0u8; size as usize];
         reader.read_exact(&mut blob)?;
