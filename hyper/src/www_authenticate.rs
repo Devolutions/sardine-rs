@@ -3,6 +3,7 @@ use hyperx;
 use hyperx::header;
 use std::fmt;
 use std::str;
+use hyperx::header::RawLike;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum AuthenticateScheme {
@@ -45,9 +46,9 @@ impl header::Header for WWWAuthenticate {
         "WWW-Authenticate"
     }
 
-    fn parse_header(raw: &header::Raw) -> hyperx::Result<WWWAuthenticate> {
+    fn parse_header<'a, T>(raw: &'a T) -> hyperx::Result<Self> where T: RawLike<'a>, Self: Sized {
         let mut pairs = Vec::with_capacity(raw.len());
-        for line in raw {
+        for line in raw.iter() {
             let header = try!(str::from_utf8(line));
             let scheme = "SRD";
             if header.starts_with(scheme) {

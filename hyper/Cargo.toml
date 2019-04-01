@@ -1,6 +1,6 @@
 [package]
 name = "hyper_sardine"
-version = "0.2.1"
+version = "0.2.2"
 license = "MIT/Apache-2.0"
 homepage = "https://github.com/wayk/sardine-rs"
 repository = "https://github.com/wayk/sardine-rs"
@@ -12,6 +12,6 @@ authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
 
 [dependencies]
 base64 = "0.6"
-hyperx = "~0.13.1"
+hyperx = "^0.14"
 log = "0.4.1"
 uuid = { version = "0.6", features = ["v4"] }
