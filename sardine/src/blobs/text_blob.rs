@@ -3,7 +3,6 @@ use std::io::Write;
 
 use blobs::Blob;
 use messages::Message;
-use srd_errors::SrdError;
 use Result;
 use std::string::ToString;
 

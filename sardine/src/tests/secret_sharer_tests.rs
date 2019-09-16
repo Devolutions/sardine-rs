@@ -1,4 +1,3 @@
-use blobs::{BasicBlob, LogonBlob};
 use cipher::Cipher;
 use srd::Srd;
 use blobs::TextBlob;
@@ -76,11 +75,8 @@ fn text_blob() {
     server.set_ciphers(server_ciphers).unwrap();
 
     // Commenting out those two lines should work without cbt verification
-//    client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
-//    server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
-
-//    let basic_blob = BasicBlob::new("fdubois", "1234567ßẞ");
-//    client.set_blob(basic_blob.clone()).unwrap();
+    client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
+    server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
 
     let mut client_status: bool = false;
     let mut server_status: bool = false;
@@ -91,24 +87,28 @@ fn text_blob() {
         in_data = out_data;
         out_data = Vec::new();
 
-        println!("Server");
-        server_status = server.authenticate(&in_data, &mut out_data).unwrap();
-        in_data = out_data;
-        out_data = Vec::new();
+        if !server_status {
+            println!("Server");
+            server_status = server.authenticate(&in_data, &mut out_data).unwrap();
+            in_data = out_data;
+            out_data = Vec::new();
+        }
     }
 
     assert!(client_status);
     assert!(server_status);
 
-    let client_text_blob = TextBlob::new("Message from client");
-    out_data = Vec::new();
-    client.send_blob(client_text_blob.clone(), &mut out_data).unwrap();
-    assert_eq!(server.get_blob_from_message::<TextBlob>(&out_data).unwrap().unwrap(), client_text_blob);
+    for i in 0..5 {
+        println!("Client is sending to server...");
+        let client_text_blob = TextBlob::new(&format!("Message from client: {}", i));
+        out_data = Vec::new();
+        client.send_blob(client_text_blob.clone(), &mut out_data).unwrap();
+        assert_eq!(server.get_blob_from_message::<TextBlob>(&out_data).unwrap().unwrap(), client_text_blob);
 
-    let server_text_blob = TextBlob::new("Message from server");
-    out_data = Vec::new();
-    server.send_blob(server_text_blob.clone(), &mut out_data).unwrap();
-    assert_eq!(client.get_blob_from_message::<TextBlob>(&out_data).unwrap().unwrap(), server_text_blob);
-
-    //assert_eq!(server.get_blob::<BasicBlob>().unwrap().unwrap(), basic_blob);
+        println!("Server is sending to client...");
+        let server_text_blob = TextBlob::new(&format!("Message from server: {}", i));
+        out_data = Vec::new();
+        server.send_blob(server_text_blob.clone(), &mut out_data).unwrap();
+        assert_eq!(client.get_blob_from_message::<TextBlob>(&out_data).unwrap().unwrap(), server_text_blob);
+    }
 }

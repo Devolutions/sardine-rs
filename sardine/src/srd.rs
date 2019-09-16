@@ -219,7 +219,7 @@ impl Srd {
                 0 => self.server_authenticate_0(input_data, output_data)?,
                 1 => {
                     self.server_authenticate_1(input_data, output_data)?;
-                    if self.delegation {
+                    if !self.delegation {
                         self.state += 1;
                         return Ok(true);
                     }
@@ -277,7 +277,7 @@ impl Srd {
 
         self.write_msg(&mut out_msg, &mut output_data)?;
 
-        Err(SrdError::Internal("".into()))
+        Ok(())
     }
 
     pub fn get_blob_from_message<T: Blob>(&mut self, input_data: &[u8]) -> Result<Option<T>> {
