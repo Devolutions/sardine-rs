@@ -90,8 +90,8 @@ cfg_if! {
         // Native public functions
         #[cfg(not(feature = "wasm"))]
         impl Srd {
-            pub fn new(is_server: bool) -> Srd {
-                Srd::_new(is_server)
+            pub fn new(is_server: bool, delegation: bool) -> Srd {
+                Srd::_new(is_server, delegation)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
@@ -132,6 +132,7 @@ pub struct Srd {
     blob: Option<SrdBlob>,
     output_data: Option<Vec<u8>>,
 
+    delegation: bool,
     is_server: bool,
     key_size: u16,
     seq_num: u8,
@@ -167,7 +168,7 @@ impl Srd {
 }
 
 impl Srd {
-    fn _new(is_server: bool) -> Srd {
+    fn _new(is_server: bool, delegation: bool) -> Srd {
         let supported_ciphers;
         if cfg!(feature = "fips") {
             supported_ciphers = vec![Cipher::AES256];
@@ -181,6 +182,7 @@ impl Srd {
             blob: None,
             output_data: None,
 
+            delegation,
             is_server,
             key_size: 256,
             seq_num: 0,
@@ -215,7 +217,13 @@ impl Srd {
         if self.is_server {
             match self.state {
                 0 => self.server_authenticate_0(input_data, output_data)?,
-                1 => self.server_authenticate_1(input_data, output_data)?,
+                1 => {
+                    self.server_authenticate_1(input_data, output_data)?;
+                    if self.delegation {
+                        self.state += 1;
+                        return Ok(true);
+                    }
+                },
                 2 => {
                     self.server_authenticate_2(input_data)?;
                     self.state += 1;
@@ -259,6 +267,36 @@ impl Srd {
         self.supported_ciphers = ciphers;
         Ok(())
     }
+
+    pub fn send_blob<T: Blob>(&mut self, blob: T, mut output_data: &mut Vec<u8>) -> Result<()> {
+        let mut data = Vec::new();
+        blob.write_to(&mut data)?;
+        let srd_blob = SrdBlob::new(T::blob_type(), &data);
+
+        let mut out_msg = new_srd_delegate_msg(self.seq_num, self.use_cbt, &srd_blob, self.cipher, &self.delegation_key, &self.iv)?;
+
+        self.write_msg(&mut out_msg, &mut output_data)?;
+
+        Err(SrdError::Internal("".into()))
+    }
+
+    pub fn get_blob_from_message<T: Blob>(&mut self, input_data: &[u8]) -> Result<Option<T>> {
+        // Receive delegate and verify credentials...
+        let input_msg = self.read_msg(input_data)?;
+        match input_msg {
+            SrdMessage::Delegate(_hdr, delegate) => {
+                let blob = delegate.get_data(self.cipher, &self.delegation_key, &self.iv)?;
+
+                let mut cursor = std::io::Cursor::new(blob.data());
+                return Ok(Some(T::read_from(&mut cursor)?));
+            }
+            _ => {
+                return Err(SrdError::BadSequence);
+            }
+        }
+
+    }
+
 
     pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
         if self.blob.is_some() {
@@ -397,7 +435,7 @@ impl Srd {
         let mut result = Vec::new();
 
         for message in &self.messages {
-            let mut clone = message.clone();
+            let clone = message.clone();
             let hdr = SrdHeader::read_from(&mut clone.as_slice())?;
             if hdr.has_mac() {
                 // Keep the message without the MAC at the end (32 bytes)
@@ -610,16 +648,20 @@ impl Srd {
                     return Err(SrdError::InvalidCbt);
                 }
 
-                // Build Delegate message
-                let mut out_msg = match self.blob {
-                    None => {
-                        return Err(SrdError::MissingBlob);
-                    }
-                    Some(ref b) => new_srd_delegate_msg(self.seq_num, self.use_cbt, b, self.cipher, &self.delegation_key, &self.iv)?,
-                };
+                if self.delegation {
+                    // Build Delegate message
+                    let mut out_msg = match self.blob {
+                        None => {
+                            return Err(SrdError::MissingBlob);
+                        }
+                        Some(ref b) => new_srd_delegate_msg(self.seq_num, self.use_cbt, b, self.cipher, &self.delegation_key, &self.iv)?,
+                    };
 
-                self.write_msg(&mut out_msg, &mut output_data)?;
-                Ok(())
+                    self.write_msg(&mut out_msg, &mut output_data)?;
+                    Ok(())
+                } else {
+                    Ok(())
+                }
             }
             _ => {
                 return Err(SrdError::BadSequence);

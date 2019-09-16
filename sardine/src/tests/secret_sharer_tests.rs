@@ -1,6 +1,7 @@
 use blobs::{BasicBlob, LogonBlob};
 use cipher::Cipher;
 use srd::Srd;
+use blobs::TextBlob;
 
 static TEST_CERT_DATA: &'static [u8] = b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x03\x02\x01\x02\x02\x10\x16
 	\xed\x2a\xa0\x49\x5f\x25\x9d\x4f\x5d\x99\xed\xad\xa5\x70\xd1\x30
@@ -55,9 +56,9 @@ static TEST_CERT_DATA: &'static [u8] = b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x0
 //const TEST_PASSWORD: &'static str = "Dummy123";
 
 #[test]
-fn good_login_basic_blob() {
-    let mut client: Srd = Srd::new(false, true);
-    let mut server: Srd = Srd::new(true, true);
+fn text_blob() {
+    let mut client: Srd = Srd::new(false, false);
+    let mut server: Srd = Srd::new(true, false);
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();
@@ -75,11 +76,11 @@ fn good_login_basic_blob() {
     server.set_ciphers(server_ciphers).unwrap();
 
     // Commenting out those two lines should work without cbt verification
-    client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
-    server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
+//    client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
+//    server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
 
-    let basic_blob = BasicBlob::new("fdubois", "1234567ßẞ");
-    client.set_blob(basic_blob.clone()).unwrap();
+//    let basic_blob = BasicBlob::new("fdubois", "1234567ßẞ");
+//    client.set_blob(basic_blob.clone()).unwrap();
 
     let mut client_status: bool = false;
     let mut server_status: bool = false;
@@ -99,53 +100,15 @@ fn good_login_basic_blob() {
     assert!(client_status);
     assert!(server_status);
 
-    assert_eq!(server.get_blob::<BasicBlob>().unwrap().unwrap(), basic_blob);
-}
+    let client_text_blob = TextBlob::new("Message from client");
+    out_data = Vec::new();
+    client.send_blob(client_text_blob.clone(), &mut out_data).unwrap();
+    assert_eq!(server.get_blob_from_message::<TextBlob>(&out_data).unwrap().unwrap(), client_text_blob);
 
-#[test]
-fn good_login_logon_blob() {
-    let mut client: Srd = Srd::new(false, true);
-    let mut server: Srd = Srd::new(true, true);
+    let server_text_blob = TextBlob::new("Message from server");
+    out_data = Vec::new();
+    server.send_blob(server_text_blob.clone(), &mut out_data).unwrap();
+    assert_eq!(client.get_blob_from_message::<TextBlob>(&out_data).unwrap().unwrap(), server_text_blob);
 
-    let mut in_data: Vec<u8> = Vec::new();
-    let mut out_data: Vec<u8> = Vec::new();
-
-    let mut client_ciphers = Vec::new();
-    //client_ciphers.push(Cipher::AES256);
-    client_ciphers.push(Cipher::ChaCha20);
-    client_ciphers.push(Cipher::XChaCha20);
-
-    let mut server_ciphers = Vec::new();
-    server_ciphers.push(Cipher::ChaCha20);
-    server_ciphers.push(Cipher::XChaCha20);
-
-    client.set_ciphers(client_ciphers).unwrap();
-    server.set_ciphers(server_ciphers).unwrap();
-
-    // Commenting out those two lines should work without cbt verification
-    client.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
-    server.set_cert_data(TEST_CERT_DATA.to_vec()).unwrap();
-
-    let logon_blob = LogonBlob::new("fdubois", "1234567ßẞ");
-    client.set_blob(logon_blob.clone()).unwrap();
-
-    let mut client_status: bool = false;
-    let mut server_status: bool = false;
-
-    while !(client_status && server_status) {
-        println!("Client");
-        client_status = client.authenticate(&in_data, &mut out_data).unwrap();
-        in_data = out_data;
-        out_data = Vec::new();
-
-        println!("Server");
-        server_status = server.authenticate(&in_data, &mut out_data).unwrap();
-        in_data = out_data;
-        out_data = Vec::new();
-    }
-
-    assert!(client_status);
-    assert!(server_status);
-
-    assert_eq!(server.get_blob::<LogonBlob>().unwrap().unwrap(), logon_blob);
+    //assert_eq!(server.get_blob::<BasicBlob>().unwrap().unwrap(), basic_blob);
 }

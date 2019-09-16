@@ -7,8 +7,8 @@ use blobs::SrdBlob;
 use std;
 
 #[no_mangle]
-pub extern "C" fn Srd_New(is_server: bool) -> *mut Srd {
-    Box::into_raw(Box::new(Srd::new(is_server))) as *mut Srd
+pub extern "C" fn Srd_New(is_server: bool, delegation: bool) -> *mut Srd {
+    Box::into_raw(Box::new(Srd::new(is_server, delegation))) as *mut Srd
 }
 
 #[no_mangle]
