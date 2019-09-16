@@ -13,7 +13,7 @@ extern crate chacha;
 #[macro_use]
 extern crate cfg_if;
 
-mod cipher;
+pub mod cipher;
 
 pub mod blobs;
 mod dh_params;

@@ -2,9 +2,11 @@
 
 extern crate libc;
 
-use srd::Srd;
+use srd::{Srd, fill_random};
+use cipher::Cipher;
 use blobs::SrdBlob;
 use std;
+use std::convert::{Into, TryInto};
 
 #[no_mangle]
 pub extern "C" fn Srd_New(is_server: bool, delegation: bool) -> *mut Srd {
@@ -179,4 +181,86 @@ pub extern "C" fn Srd_GetIntegrityKey(srd_handle: *mut Srd, buffer: *mut u8, buf
     }
 
     return size;
+}
+
+#[no_mangle]
+pub extern "C" fn Srd_GetCipher(srd_handle: *mut Srd) -> libc::c_int {
+    let srd = unsafe { &mut *srd_handle };
+
+    let cipher: u32 = srd.get_cipher().into();
+
+    return cipher as i32;
+}
+
+#[no_mangle]
+pub extern "C" fn Srd_Encrypt(cipher: i32,
+                              key: *mut u8,
+                              key_size: libc::c_int,
+                              data: *const u8,
+                              data_size: libc::c_int,
+                              output: *mut u8,
+                              output_size: libc::c_int) -> libc::c_int {
+
+    let cipher_result: Result<Cipher, ()> = (cipher as u32).try_into();
+
+    if let Ok(cipher) = cipher_result {
+        let delegated_key = unsafe { std::slice::from_raw_parts::<u8>(key, key_size as usize) };
+        let data_to_encrypt = unsafe { std::slice::from_raw_parts::<u8>(data, data_size as usize) };
+
+        let mut iv = [0; 32];
+        if let Ok(_) = fill_random(&mut iv) {
+            if let Ok(encrypted_data) = cipher.encrypt_data(&data_to_encrypt, &delegated_key, &iv) {
+                let output_len = encrypted_data.len() as i32;
+
+                if output != std::ptr::null_mut() {
+                    if output_len > output_size {
+                        return -1;
+                    }
+
+                    let buffer_data = unsafe { std::slice::from_raw_parts_mut::<u8>(output, output_size as usize) };
+                    buffer_data.clone_from_slice(&encrypted_data);
+                }
+
+                return output_len;
+            }
+        }
+    }
+    return -1;
+}
+
+#[no_mangle]
+pub extern "C" fn Srd_Decrypt(cipher: u32,
+                              key: *mut u8,
+                              key_size: libc::c_int,
+                              data: *const u8,
+                              data_size: libc::c_int,
+                              output: *mut u8,
+                              output_size: libc::c_int) -> libc::c_int {
+
+    let cipher_result: Result<Cipher, ()> = cipher.try_into();
+
+    if let Ok(cipher) = cipher_result {
+        let delegated_key = unsafe { std::slice::from_raw_parts::<u8>(key, key_size as usize) };
+        let data_to_encrypt = unsafe { std::slice::from_raw_parts::<u8>(data, data_size as usize) };
+
+        let mut iv = [0; 32];
+
+        if let Ok(_) = fill_random(&mut iv) {
+            if let Ok(decrypted_data) = cipher.decrypt_data(&data_to_encrypt, &delegated_key, &iv) {
+                let output_len = decrypted_data.len() as i32;
+
+                if output != std::ptr::null_mut() {
+                    if output_len > output_size {
+                        return -1;
+                    }
+
+                    let buffer_data = unsafe { std::slice::from_raw_parts_mut::<u8>(output, output_size as usize) };
+                    buffer_data.clone_from_slice(&decrypted_data);
+                }
+
+                return output_len;
+            }
+        }
+    }
+    return -1;
 }

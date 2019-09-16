@@ -6,6 +6,7 @@ use srd_errors::SrdError;
 use chacha::{ChaCha, KeyStream};
 
 use Result;
+use std::convert::TryFrom;
 
 const AES256_FLAG: u32 = 0x00000001;
 const CHACHA20_FLAG: u32 = 0x00000100;
@@ -68,6 +69,29 @@ impl Cipher {
             return Ok(Cipher::AES256);
         };
         Err(SrdError::Cipher)
+    }
+}
+
+impl From<Cipher> for u32 {
+    fn from(cipher: Cipher) -> Self {
+        match cipher {
+            Cipher::AES256 => AES256_FLAG,
+            Cipher::ChaCha20 => CHACHA20_FLAG,
+            Cipher::XChaCha20 => XCHACHA20_FLAG,
+        }
+    }
+}
+
+impl TryFrom<u32> for Cipher {
+    type Error = ();
+
+    fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
+        match value {
+            AES256_FLAG => Ok(Cipher::AES256),
+            CHACHA20_FLAG => Ok(Cipher::ChaCha20),
+            XCHACHA20_FLAG => Ok(Cipher::XChaCha20),
+            _ => Err(())
+        }
     }
 }
 

@@ -28,6 +28,9 @@ namespace Sardine
         public static extern int Srd_GetIntegrityKey(IntPtr handle, byte[] data, int size);
 
         [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Srd_GetCipher(IntPtr handle);
+
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_Input(IntPtr handle, byte[] data, int size);
 
         [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
@@ -145,6 +148,11 @@ namespace Sardine
             return size;
         }
 
+        public int Cipher()
+        {
+            return Src_Srd_GetCipher(m_handle);
+        }
+
         public int SetCertData(byte[] data)
         {
             return Srd_SetCertData(m_handle, data, data != null ? data.Length : 0);
@@ -232,6 +240,7 @@ namespace Sardine
             int messageNum = 1;
             int clientStatus = 1;
             int serverStatus = 1;
+            int cipher = -1;
             byte[] inData = null;
             byte[] outData = null;
             SrdContext client = new SrdContext(false);
@@ -287,7 +296,9 @@ namespace Sardine
             byte[] integrityKey = null;
             server.GetDelegationKey(ref delegationKey); // same as client, used for encryption
             server.GetIntegrityKey(ref integrityKey); // same as client, used for integrity
+            cipher = server.Cipher();
 
+            Console.WriteLine("\nCipher: {0}", cipher);
             Console.WriteLine("\nDelegationKey:");
             Utils.HexDump(delegationKey);
             Console.WriteLine("\nIntegrityKey:");

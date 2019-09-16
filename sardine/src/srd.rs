@@ -122,6 +122,10 @@ cfg_if! {
             pub fn set_output_data(&mut self, output_data: Vec<u8>) {
                 self.output_data = Some(output_data);
             }
+
+            pub fn get_cipher(&self) -> Cipher {
+                self.cipher
+            }
         }
 
     }
