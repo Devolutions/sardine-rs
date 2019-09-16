@@ -6,38 +6,44 @@ namespace Sardine
 {
     class SrdContext
     {
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr Srd_New(bool server);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_SetBlob(IntPtr handle, byte[] blobName, int blobNameSize, byte[] blobData, int blobDataSize);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_GetBlobName(IntPtr handle, byte[] data, int size);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_GetBlobData(IntPtr handle, byte[] data, int size);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_SetCertData(IntPtr handle, byte[] data, int size);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_GetDelegationKey(IntPtr handle, byte[] data, int size);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_GetIntegrityKey(IntPtr handle, byte[] data, int size);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_GetCipher(IntPtr handle);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_Input(IntPtr handle, byte[] data, int size);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Srd_Output(IntPtr handle, byte[] data, int size);
 
-        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern void Srd_Free(IntPtr handle);
+
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Srd_Encrypt(int cipher, byte[] key, int key_size, byte[] data, int data_size, byte[] output, int output_size);
+
+        [DllImport("C:\\wayk\\dev\\sardine-rs\\target\\debug\\sardine.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Srd_Decrypt(int cipher, byte[] key, int key_size, byte[] data, int data_size, byte[] output, int output_size);
 
         private IntPtr m_handle;
 
@@ -150,7 +156,7 @@ namespace Sardine
 
         public int Cipher()
         {
-            return Src_Srd_GetCipher(m_handle);
+            return Srd_GetCipher(m_handle);
         }
 
         public int SetCertData(byte[] data)
@@ -161,6 +167,16 @@ namespace Sardine
         public int Input(byte[] inData)
         {
             return Srd_Input(m_handle, inData, inData != null ? inData.Length : 0);
+        }
+
+        public int Encrypt(int cipher, byte[] key, byte[] data, byte[] output)
+        {
+            return Srd_Encrypt(cipher, key, key != null ? key.Length : 0, data, data != null ? data.Length : 0, output, output != null ? output.Length : 0);
+        }
+
+        public int Decrypt(int cipher, byte[] key, byte[] data, byte[] output)
+        {
+            return Srd_Decrypt(cipher, key, key != null ? key.Length : 0, data, data != null ? data.Length : 0, output, output != null ? output.Length : 0);
         }
 
         public int Output(ref byte[] outData)
@@ -298,11 +314,25 @@ namespace Sardine
             server.GetIntegrityKey(ref integrityKey); // same as client, used for integrity
             cipher = server.Cipher();
 
-            Console.WriteLine("\nCipher: {0}", cipher);
+            Console.WriteLine("\nCipher: 0x{0}", cipher.ToString("X"));
             Console.WriteLine("\nDelegationKey:");
             Utils.HexDump(delegationKey);
             Console.WriteLine("\nIntegrityKey:");
             Utils.HexDump(integrityKey);
+
+            byte[] data_to_encrypt = Encoding.Default.GetBytes("Client message.."); ;
+            byte[] encrypted_data = new byte[16];
+            byte[] decrypted_data = new byte[16];
+
+            server.Encrypt(cipher, delegationKey, data_to_encrypt, encrypted_data);
+            server.Decrypt(cipher, delegationKey, encrypted_data, decrypted_data);
+
+            Console.WriteLine("\nData to encrypt:");
+            Utils.HexDump(data_to_encrypt);
+            Console.WriteLine("\nEncrypted data:");
+            Utils.HexDump(encrypted_data);
+            Console.WriteLine("\nDecrypted data: {0}", System.Text.Encoding.Default.GetString(decrypted_data));
+            Utils.HexDump(decrypted_data);
 
             return 1;
         }
