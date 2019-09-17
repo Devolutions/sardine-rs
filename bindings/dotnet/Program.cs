@@ -314,6 +314,104 @@ namespace Sardine
         }
     }
 
+    class SrdBlobContext
+    {
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr SrdBlob_New(byte[] blobName, int blobNameSize, byte[] blobData, int blobDataSize);
+
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SrdBlob_Free(IntPtr handle);
+
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SrdBlob_GetName(IntPtr handle, byte[] data, int size);
+
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SrdBlob_GetData(IntPtr handle, byte[] data, int size);
+
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SrdBlob_Encrypt(IntPtr handle, int cipher, byte[] key, int keySize, byte[] output, int outputSize);
+
+        [DllImport("sardine", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr SrdBlob_Decrypt(int cipher, byte[] key, int key_size, byte[] data, int dataSize);
+
+        IntPtr m_handle;
+
+        public SrdBlobContext(IntPtr handle)
+        {
+            m_handle = handle;
+        }
+
+        public SrdBlobContext(string name, byte[] data)
+        {
+            byte[] name_in_byte = SrdContext.StringToBytes(name, true);
+            m_handle = SrdBlob_New(name_in_byte, name_in_byte != null ? name_in_byte.Length : 0, data, data != null ? data.Length : 0);
+        }
+
+        public string GetBlobName()
+        {
+            int nameSize;
+
+            nameSize = SrdBlob_GetName(m_handle, null, 0);
+
+            if (nameSize > 0)
+            {
+                byte[] name = new byte[nameSize];
+                SrdBlob_GetName(m_handle, name, name.Length);
+                return System.Text.Encoding.Default.GetString(name);
+            }
+
+            return null;
+        }
+
+        public byte[] GetBlobData()
+        {
+            int dataSize;
+
+            dataSize = SrdBlob_GetData(m_handle, null, 0);
+
+            if (dataSize > 0)
+            {
+                byte[] data = new byte[dataSize];
+                SrdBlob_GetData(m_handle, data, data.Length);
+                return data;
+            }
+
+            return null;
+        }
+
+        public int Encrypt(int cipher, byte[] key, ref byte[] output)
+        {
+            int outputSize;
+
+            output = null;
+            outputSize = SrdBlob_Encrypt(m_handle, cipher, key, key.Length, null, 0);
+
+            if (outputSize > 0)
+            {
+                output = new byte[outputSize];
+                outputSize = SrdBlob_Encrypt(m_handle, cipher, key, key.Length, output, output.Length);
+            }
+
+            return outputSize;
+
+        }
+
+        public static SrdBlobContext Decrypt(int cipher, byte[] key, byte[] data)
+        {
+            return new SrdBlobContext(SrdBlob_Decrypt(cipher, key, key.Length, data, data.Length));
+            
+        }
+
+        ~SrdBlobContext()
+        {
+            if (m_handle != IntPtr.Zero)
+            {
+                SrdBlob_Free(m_handle);
+                m_handle = IntPtr.Zero;
+            }
+        }
+    }
+
     class Utils
     {
         public static void HexDump(byte[] bytes)
@@ -342,6 +440,7 @@ namespace Sardine
             int cipher = -1;
             byte[] inData = null;
             byte[] outData = null;
+            byte[] encryptedData = null;
             SrdContext client = new SrdContext(false);
             SrdContext server = new SrdContext(true);
 
@@ -405,21 +504,18 @@ namespace Sardine
 
             byte[] dataToEncrypt = SrdContext.StringToBytes("Client message!!!!!", true);
 
-            IntPtr srdBlob = server.NewSrdBlob("Text", dataToEncrypt);
+            SrdBlobContext srdBlobToEncrypt = new SrdBlobContext("text/plain", dataToEncrypt);
+            srdBlobToEncrypt.Encrypt(cipher, delegationKey, ref encryptedData);
 
-            byte[] encryptedData = null;
-            server.EncryptSrdBlob(srdBlob, cipher, delegationKey, ref encryptedData);
-            server.FreeSrdBlob(srdBlob);
-            
-            srdBlob = server.DecryptSrdBlob(cipher, delegationKey, encryptedData);
-            string srdBlobName = server.GetSrdBlobName(srdBlob);
-            byte[] srdBlobData = server.GetSrdBlobData(srdBlob);
+            SrdBlobContext srdBlobDecrypted = SrdBlobContext.Decrypt(cipher, delegationKey, encryptedData);
+            string srdBlobName = srdBlobDecrypted.GetBlobName();
+            byte[] srdBlobData = srdBlobDecrypted.GetBlobData();
 
-            Console.WriteLine("\nDatagit to encrypt:");
+            Console.WriteLine("\nData to encrypt:");
             Utils.HexDump(dataToEncrypt);
             Console.WriteLine("\nEncrypted data:");
             Utils.HexDump(encryptedData);
-            Console.WriteLine("\nDecrypted data: name={0}, data={1}", srdBlobName, System.Text.Encoding.Default.GetString(srdBlobData));
+            Console.WriteLine("\nDecrypted blob: \nname={0}\ndata={1}", srdBlobName, System.Text.Encoding.Default.GetString(srdBlobData));
             Utils.HexDump(srdBlobData);
 
             return 1;
