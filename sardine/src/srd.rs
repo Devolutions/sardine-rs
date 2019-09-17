@@ -272,36 +272,6 @@ impl Srd {
         Ok(())
     }
 
-    pub fn send_blob<T: Blob>(&mut self, blob: T, mut output_data: &mut Vec<u8>) -> Result<()> {
-        let mut data = Vec::new();
-        blob.write_to(&mut data)?;
-        let srd_blob = SrdBlob::new(T::blob_type(), &data);
-
-        let mut out_msg = new_srd_delegate_msg(self.seq_num, self.use_cbt, &srd_blob, self.cipher, &self.delegation_key, &self.iv)?;
-
-        self.write_msg(&mut out_msg, &mut output_data)?;
-
-        Ok(())
-    }
-
-    pub fn get_blob_from_message<T: Blob>(&mut self, input_data: &[u8]) -> Result<Option<T>> {
-        // Receive delegate and verify credentials...
-        let input_msg = self.read_msg(input_data)?;
-        match input_msg {
-            SrdMessage::Delegate(_hdr, delegate) => {
-                let blob = delegate.get_data(self.cipher, &self.delegation_key, &self.iv)?;
-
-                let mut cursor = std::io::Cursor::new(blob.data());
-                return Ok(Some(T::read_from(&mut cursor)?));
-            }
-            _ => {
-                return Err(SrdError::BadSequence);
-            }
-        }
-
-    }
-
-
     pub fn get_blob<T: Blob>(&self) -> Result<Option<T>> {
         if self.blob.is_some() {
             let blob = self.blob.as_ref().unwrap();

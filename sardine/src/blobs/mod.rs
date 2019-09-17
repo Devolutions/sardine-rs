@@ -9,10 +9,8 @@ use srd::fill_random;
 
 mod basic_blob;
 mod logon_blob;
-mod text_blob;
 pub use self::basic_blob::BasicBlob;
 pub use self::logon_blob::LogonBlob;
-pub use self::text_blob::TextBlob;
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
