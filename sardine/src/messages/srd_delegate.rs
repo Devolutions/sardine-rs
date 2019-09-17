@@ -1,12 +1,12 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use cipher::Cipher;
+use crate::cipher::Cipher;
 use std;
 use std::io::{Read, Write};
 
-use blobs::SrdBlob;
-use messages::{srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage};
-use srd_errors::SrdError;
-use Result;
+use crate::blobs::SrdBlob;
+use crate::messages::{srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage};
+use crate::srd_errors::SrdError;
+use crate::Result;
 
 const DELEGATE_MESSAGE_SIZE_LIMIT: u32 = 16 * 1024; // Limit DELEGATE messages to 16 Kb.
 

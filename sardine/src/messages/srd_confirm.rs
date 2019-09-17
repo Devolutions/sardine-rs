@@ -1,10 +1,10 @@
 use std::io::Read;
 use std::io::Write;
 
-use messages::{
+use crate::messages::{
     srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage,
 };
-use Result;
+use crate::Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdConfirm {
@@ -52,7 +52,7 @@ pub fn new_srd_confirm_msg(seq_num: u8, use_cbt: bool, cbt: [u8; 32]) -> SrdMess
 
 #[cfg(test)]
 mod test {
-    use messages::{new_srd_confirm_msg, srd_msg_id::SRD_CONFIRM_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
+    use crate::messages::{new_srd_confirm_msg, srd_msg_id::SRD_CONFIRM_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
     use std;
 
     #[test]

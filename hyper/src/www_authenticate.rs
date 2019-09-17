@@ -49,7 +49,7 @@ impl header::Header for WWWAuthenticate {
     fn parse_header<'a, T>(raw: &'a T) -> hyperx::Result<Self> where T: RawLike<'a>, Self: Sized {
         let mut pairs = Vec::with_capacity(raw.len());
         for line in raw.iter() {
-            let header = try!(str::from_utf8(line));
+            let header = r#try!(str::from_utf8(line));
             let scheme = "SRD";
             if header.starts_with(scheme) {
                 if scheme.len() + 1 < line.len() {

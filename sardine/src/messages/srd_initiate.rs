@@ -1,8 +1,8 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use messages::{srd_msg_id, Message, SrdHeader, SrdMessage};
 use std::io::{Read, Write};
-use Result;
-use SrdError;
+use crate::Result;
+use crate::SrdError;
+use crate::messages::{srd_msg_id, Message, SrdHeader, SrdMessage};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdInitiate {
@@ -57,7 +57,7 @@ pub fn new_srd_initiate_msg(seq_num: u8, use_cbt: bool, ciphers: u32, key_size: 
 
 #[cfg(test)]
 mod test {
-    use messages::{new_srd_initiate_msg, srd_msg_id::SRD_INITIATE_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
+    use crate::messages::{new_srd_initiate_msg, srd_msg_id::SRD_INITIATE_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
     use std;
 
     #[test]

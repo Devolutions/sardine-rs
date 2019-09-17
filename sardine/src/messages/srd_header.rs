@@ -1,8 +1,8 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use messages::{srd_flags::*, Message, SRD_SIGNATURE};
+use crate::messages::{srd_flags::*, Message, SRD_SIGNATURE};
 use std::io::{Read, Write};
-use Result;
-use SrdError;
+use crate::Result;
+use crate::SrdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdHeader {

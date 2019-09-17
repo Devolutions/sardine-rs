@@ -1,11 +1,11 @@
 #[cfg(feature = "aes")]
 use aes_frast::{aes_core, aes_with_operation_mode};
 
-use srd_errors::SrdError;
+use crate::srd_errors::SrdError;
 
 use chacha::{ChaCha, KeyStream};
 
-use Result;
+use crate::Result;
 use std::convert::TryFrom;
 
 const AES256_FLAG: u32 = 0x00000001;

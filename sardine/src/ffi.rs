@@ -1,13 +1,11 @@
 #![allow(non_snake_case)]
 
-extern crate libc;
-
-use srd::{Srd, fill_random};
-use cipher::Cipher;
-use blobs::SrdBlob;
 use std;
 use std::convert::{Into, TryInto};
-use messages::Message;
+use crate::srd::{Srd, fill_random};
+use crate::cipher::Cipher;
+use crate::blobs::SrdBlob;
+use crate::messages::Message;
 
 #[no_mangle]
 pub extern "C" fn Srd_New(is_server: bool, delegation: bool) -> *mut Srd {

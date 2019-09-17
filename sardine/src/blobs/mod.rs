@@ -2,10 +2,10 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Read;
 use std::io::Write;
 
-use messages::Message;
-use Result;
+use crate::messages::Message;
+use crate::Result;
 
-use srd::fill_random;
+use crate::srd::fill_random;
 
 mod basic_blob;
 mod logon_blob;
@@ -124,8 +124,8 @@ pub trait Blob: Message {
 
 #[cfg(test)]
 mod test {
-    use blobs::SrdBlob;
-    use messages::Message;
+    use crate::blobs::SrdBlob;
+    use crate::messages::Message;
     use std;
 
     #[test]

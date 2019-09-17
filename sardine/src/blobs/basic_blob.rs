@@ -1,10 +1,10 @@
 use std::io::Read;
 use std::io::Write;
 
-use blobs::Blob;
-use messages::Message;
-use srd_errors::SrdError;
-use Result;
+use crate::blobs::Blob;
+use crate::messages::Message;
+use crate::srd_errors::SrdError;
+use crate::Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BasicBlob {

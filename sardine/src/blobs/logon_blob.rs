@@ -2,9 +2,9 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Read;
 use std::io::Write;
 
-use blobs::Blob;
-use messages::Message;
-use Result;
+use crate::blobs::Blob;
+use crate::messages::Message;
+use crate::Result;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LogonBlob {

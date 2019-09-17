@@ -1,17 +1,7 @@
 #![cfg_attr(feature = "wasm", feature(use_extern_macros))]
 extern crate byteorder;
-extern crate hmac;
-extern crate num_bigint;
-extern crate rand;
-extern crate sha2;
-
 #[cfg(feature = "aes")]
 extern crate aes_frast;
-
-extern crate chacha;
-
-#[macro_use]
-extern crate cfg_if;
 
 pub mod cipher;
 
@@ -25,6 +15,7 @@ pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
 pub use cipher::Cipher;
 pub use srd::Srd;
 pub use srd_errors::SrdError;
+use cfg_if::cfg_if;
 
 cfg_if! {
     if #[cfg(feature = "wasm")] {

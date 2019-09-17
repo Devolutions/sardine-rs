@@ -1,7 +1,7 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use messages::{expand_start, srd_msg_id, Message, SrdHeader, SrdMessage};
 use std::io::{Read, Write};
-use Result;
+use crate::Result;
+use crate::messages::{expand_start, srd_msg_id, Message, SrdHeader, SrdMessage};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdOffer {
@@ -87,7 +87,7 @@ pub fn new_srd_offer_msg(
 
 #[cfg(test)]
 mod test {
-    use messages::{new_srd_offer_msg, srd_msg_id::SRD_OFFER_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
+    use crate::messages::{new_srd_offer_msg, srd_msg_id::SRD_OFFER_MSG_ID, Message, SrdMessage, SRD_SIGNATURE};
     use std;
 
     #[test]

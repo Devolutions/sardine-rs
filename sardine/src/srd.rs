@@ -3,19 +3,17 @@ use std::io::Write;
 
 #[cfg(not(feature = "wasm"))]
 use rand::{EntropyRng, RngCore};
-
 use num_bigint::BigUint;
-
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
+use cfg_if::cfg_if;
 
-use cipher::Cipher;
-use Result;
-
-use blobs::{Blob, SrdBlob};
-use dh_params::SRD_DH_PARAMS;
-use messages::*;
-use srd_errors::SrdError;
+use crate::cipher::Cipher;
+use crate::Result;
+use crate::blobs::{Blob, SrdBlob};
+use crate::dh_params::SRD_DH_PARAMS;
+use crate::messages::*;
+use crate::srd_errors::SrdError;
 
 cfg_if! {
     if #[cfg(feature = "wasm")] {

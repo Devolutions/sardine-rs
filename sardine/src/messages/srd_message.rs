@@ -1,7 +1,7 @@
-use messages::*;
-use srd_errors::SrdError;
 use std::io::{Read, Write};
-use Result;
+use crate::messages::*;
+use crate::srd_errors::SrdError;
+use crate::Result;
 
 pub trait Message {
     fn read_from<R: Read>(reader: &mut R) -> Result<Self>
