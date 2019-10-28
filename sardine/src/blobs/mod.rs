@@ -5,7 +5,8 @@ use std::io::Write;
 use messages::Message;
 use Result;
 
-use srd::fill_random;
+use rand::rngs::OsRng;
+use rand::RngCore;
 
 mod basic_blob;
 mod logon_blob;
@@ -105,13 +106,13 @@ impl Message for SrdBlob {
         writer.write_u8(0u8)?;
 
         let mut padding = vec![0u8; type_padding];
-        fill_random(&mut padding)?;
+        OsRng.fill_bytes(&mut padding);
         writer.write_all(&padding)?;
 
         writer.write_all(&self.data)?;
 
         let mut padding = vec![0u8; data_padding];
-        fill_random(&mut padding)?;
+        OsRng.fill_bytes(&mut padding);
         writer.write_all(&padding)?;
 
         Ok(())
