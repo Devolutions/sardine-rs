@@ -1,8 +1,7 @@
 use std;
 use std::io::Write;
 
-#[cfg(not(feature = "wasm"))]
-use rand::{EntropyRng, RngCore};
+use rand::{rngs::OsRng, RngCore};
 
 use num_bigint::BigUint;
 
@@ -397,8 +396,7 @@ impl Srd {
         let mut result = Vec::new();
 
         for message in &self.messages {
-            let mut clone = message.clone();
-            let hdr = SrdHeader::read_from(&mut clone.as_slice())?;
+            let hdr = SrdHeader::read_from(&mut message.as_slice())?;
             if hdr.has_mac() {
                 // Keep the message without the MAC at the end (32 bytes)
                 let slice = message.as_slice();
@@ -444,12 +442,12 @@ impl Srd {
                 let key_size = initiate.key_size();
 
                 let mut private_key_bytes = vec![0u8; self.key_size as usize];
-                fill_random(&mut private_key_bytes)?;
+                OsRng.try_fill_bytes(&mut private_key_bytes)?;
 
                 // Challenge
                 self.private_key = BigUint::from_bytes_be(&private_key_bytes);
                 let public_key = self.generator.modpow(&self.private_key, &self.prime);
-                fill_random(&mut self.server_nonce)?;
+                OsRng.try_fill_bytes(&mut self.server_nonce)?;
 
                 let mut cipher_flags = 0u32;
                 for c in &self.supported_ciphers {
@@ -499,13 +497,13 @@ impl Srd {
 
                 let mut private_key_bytes = vec![0u8; self.key_size as usize];
 
-                fill_random(&mut private_key_bytes)?;
+                OsRng.try_fill_bytes(&mut private_key_bytes)?;
 
                 self.private_key = BigUint::from_bytes_be(&private_key_bytes);
 
                 let public_key = self.generator.modpow(&self.private_key, &self.prime);
 
-                fill_random(&mut self.client_nonce)?;
+                OsRng.try_fill_bytes(&mut self.client_nonce)?;
 
                 self.server_nonce = offer.nonce;
                 self.secret_key = BigUint::from_bytes_be(&offer.public_key)
@@ -696,7 +694,7 @@ pub fn fill_random(data: &mut [u8]) -> Result<()> {
 
 #[cfg(not(feature = "wasm"))]
 pub fn fill_random(data: &mut [u8]) -> Result<()> {
-    EntropyRng::new().try_fill_bytes(data)?;
+    OsRng.try_fill_bytes(data)?;
     Ok(())
 }
 
