@@ -348,20 +348,19 @@ impl Srd {
     }
 
     fn compute_cbt(&self, nonce: &[u8; 32]) -> Result<[u8; 32]> {
-        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+        let mut cbt_data = [0u8; 32];
 
-        hmac.input(nonce);
         if self.use_cbt {
+            let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+
+            hmac.input(nonce);
             if let Some(ref cert_data) = self.cert_data {
                 hmac.input(&cert_data);
             } else {
                 return Err(SrdError::InvalidCert);
             }
+            cbt_data.as_mut().write_all(&hmac.result().code().to_vec())?;
         }
-
-        let mut cbt_data = [0u8; 32];
-        cbt_data.as_mut().write_all(&hmac.result().code().to_vec())?;
-
         Ok(cbt_data)
     }
 
