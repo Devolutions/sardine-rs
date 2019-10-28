@@ -1,4 +1,3 @@
-#![cfg_attr(feature = "wasm", feature(use_extern_macros))]
 extern crate byteorder;
 extern crate hmac;
 extern crate num_bigint;
@@ -22,13 +21,13 @@ pub mod srd;
 mod srd_errors;
 
 pub type Result<T> = std::result::Result<T, srd_errors::SrdError>;
+
 pub use cipher::Cipher;
 pub use srd::Srd;
 pub use srd_errors::SrdError;
 
 cfg_if! {
     if #[cfg(feature = "wasm")] {
-        #[macro_use]
         extern crate wasm_bindgen;
         pub use srd::SrdJsResult;
     }
