@@ -13,7 +13,7 @@ authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
 
 [lib]
 name = "sardine"
-crate-type = ["cdylib", "staticlib", "lib"]
+crate-type = ["staticlib", "lib"]
 
 [profile.release]
 lto = true
