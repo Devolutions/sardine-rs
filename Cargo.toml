@@ -3,6 +3,3 @@ members = [
     "sardine",
     "hyper"
 ]
-
-[patch.crates-io]
-block-padding = { git = "https://github.com/zer0x64/utils", rev = "1fa554a4b38bcbb99b6b0d29d3fb1ad2ecc821d"}
