@@ -1,9 +1,13 @@
-#[cfg(feature = "aes")]
-use aes_frast::{aes_core, aes_with_operation_mode};
-
 use srd_errors::SrdError;
 
 use chacha::{ChaCha, KeyStream};
+
+cfg_if! {
+    if #[cfg(feature = "aes")]{
+        use aes::Aes256;
+        use block_modes::{BlockMode, Cbc, block_padding::NoPadding};
+    }
+}
 
 use Result;
 
@@ -77,13 +81,10 @@ fn encrypt_data_aes(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         return Err(SrdError::InvalidDataLength);
     }
 
-    let mut w_keys = vec![0u32; 60];
-    let mut cipher = vec![0u8; data.len()];
+    let cipher = Cbc::<Aes256, NoPadding>::new_var(key, &iv[0..16])?;
+    let ciphertext = cipher.encrypt_vec(data);
 
-    aes_core::setkey_enc_auto(&key, &mut w_keys);
-    aes_with_operation_mode::cbc_enc(&data, &mut cipher, &w_keys, &iv[0..16]);
-
-    Ok(cipher)
+    Ok(ciphertext)
 }
 
 #[cfg(feature = "aes")]
@@ -92,13 +93,10 @@ fn decrypt_data_aes(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         return Err(SrdError::InvalidDataLength);
     }
 
-    let mut w_keys = vec![0u32; 60];
-    let mut cipher = vec![0u8; data.len()];
+    let cipher = Cbc::<Aes256, NoPadding>::new_var(key, &iv[0..16])?;
+    let plaintext = cipher.decrypt_vec(data)?;
 
-    aes_core::setkey_dec_auto(&key, &mut w_keys);
-    aes_with_operation_mode::cbc_dec(&data, &mut cipher, &w_keys, &iv[0..16]);
-
-    Ok(cipher)
+    Ok(plaintext)
 }
 
 #[cfg(not(feature = "aes"))]

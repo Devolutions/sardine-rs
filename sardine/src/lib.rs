@@ -4,9 +4,6 @@ extern crate num_bigint;
 extern crate rand;
 extern crate sha2;
 
-#[cfg(feature = "aes")]
-extern crate aes_frast;
-
 extern crate chacha;
 
 #[macro_use]
@@ -33,6 +30,14 @@ cfg_if! {
     }
     else {
         pub mod ffi;
+    }
+}
+
+cfg_if! {
+    if #[cfg(feature = "aes")] {
+        extern crate aes256 as aes;
+        extern crate block_modes;
+
     }
 }
 
