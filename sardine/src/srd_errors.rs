@@ -119,3 +119,20 @@ impl From<rand::Error> for SrdError {
         SrdError::Rng
     }
 }
+
+cfg_if! {
+    if #[cfg(feature = "aes")] {
+        use block_modes::{InvalidKeyIvLength, BlockModeError};
+        impl From<InvalidKeyIvLength> for SrdError {
+            fn from(_error: InvalidKeyIvLength) -> SrdError{
+                SrdError::Crypto
+            }
+        }
+
+        impl From<BlockModeError> for SrdError {
+            fn from(_error: BlockModeError) -> SrdError{
+                SrdError::Crypto
+            }
+        }
+    }
+}

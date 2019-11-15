@@ -116,6 +116,7 @@ fn good_login_logon_blob() {
     client_ciphers.push(Cipher::XChaCha20);
 
     let mut server_ciphers = Vec::new();
+    //server_ciphers.push(Cipher::AES256);
     server_ciphers.push(Cipher::ChaCha20);
     server_ciphers.push(Cipher::XChaCha20);
 
