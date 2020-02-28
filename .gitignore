@@ -3,3 +3,9 @@
 /.idea
 Cargo.lock
 .DS_Store
+
+*.nuget.props
+*.nuget.targets
+
+[Bb]in/
+[Oo]bj/
