@@ -40,8 +40,8 @@ cfg_if! {
         #[wasm_bindgen]
         impl Srd {
             #[wasm_bindgen(constructor)]
-            pub fn new(is_server: bool) -> Srd {
-                Srd::_new(is_server)
+            pub fn new(is_server: bool, delegate: bool) -> Srd {
+                Srd::_new(is_server, delegation)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
@@ -89,8 +89,8 @@ cfg_if! {
         // Native public functions
         #[cfg(not(feature = "wasm"))]
         impl Srd {
-            pub fn new(is_server: bool) -> Srd {
-                Srd::_new(is_server)
+            pub fn new(is_server: bool, delegation: bool) -> Srd {
+                Srd::_new(is_server, delegation)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
@@ -131,6 +131,7 @@ pub struct Srd {
     blob: Option<SrdBlob>,
     output_data: Option<Vec<u8>>,
 
+    delegation: bool,
     is_server: bool,
     key_size: u16,
     seq_num: u8,
@@ -166,7 +167,7 @@ impl Srd {
 }
 
 impl Srd {
-    fn _new(is_server: bool) -> Srd {
+    fn _new(is_server: bool, delegation: bool) -> Srd {
         let supported_ciphers;
         if cfg!(feature = "fips") {
             supported_ciphers = vec![Cipher::AES256];
@@ -180,6 +181,7 @@ impl Srd {
             blob: None,
             output_data: None,
 
+            delegation,
             is_server,
             key_size: 256,
             seq_num: 0,
@@ -214,7 +216,13 @@ impl Srd {
         if self.is_server {
             match self.state {
                 0 => self.server_authenticate_0(input_data, output_data)?,
-                1 => self.server_authenticate_1(input_data, output_data)?,
+                1 => {
+                    self.server_authenticate_1(input_data, output_data)?;
+                    if !self.delegation {
+                        self.state += 1;
+                        return Ok(true);
+                    }
+                },
                 2 => {
                     self.server_authenticate_2(input_data)?;
                     self.state += 1;
@@ -607,6 +615,7 @@ impl Srd {
                     return Err(SrdError::InvalidCbt);
                 }
 
+                if self.delegation {
                 // Build Delegate message
                 let mut out_msg = match self.blob {
                     None => {
@@ -617,6 +626,9 @@ impl Srd {
 
                 self.write_msg(&mut out_msg, &mut output_data)?;
                 Ok(())
+                } else {
+                    Ok(())
+                }
             }
             _ => {
                 return Err(SrdError::BadSequence);

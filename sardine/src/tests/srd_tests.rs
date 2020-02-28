@@ -56,8 +56,8 @@ static TEST_CERT_DATA: &'static [u8] = b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x0
 
 #[test]
 fn good_login_basic_blob() {
-    let mut client: Srd = Srd::new(false);
-    let mut server: Srd = Srd::new(true);
+    let mut client: Srd = Srd::new(false, true);
+    let mut server: Srd = Srd::new(true, true);
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();
@@ -104,8 +104,8 @@ fn good_login_basic_blob() {
 
 #[test]
 fn good_login_logon_blob() {
-    let mut client: Srd = Srd::new(false);
-    let mut server: Srd = Srd::new(true);
+    let mut client: Srd = Srd::new(false, true);
+    let mut server: Srd = Srd::new(true, true);
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();
