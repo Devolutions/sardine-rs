@@ -2,7 +2,7 @@ use std::io::Read;
 use std::io::Write;
 
 use messages::{
-    srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage,
+    srd_flags::SRD_FLAG_SKIP, srd_message::ReadMac, srd_msg_id, Message, SrdHeader, SrdMessage,
 };
 use Result;
 
@@ -43,8 +43,13 @@ impl Message for SrdConfirm {
     }
 }
 
-pub fn new_srd_confirm_msg(seq_num: u8, use_cbt: bool, cbt: [u8; 32]) -> SrdMessage {
-    let hdr = SrdHeader::new(srd_msg_id::SRD_CONFIRM_MSG_ID, seq_num, use_cbt, true);
+pub fn new_srd_confirm_msg(seq_num: u8, use_cbt: bool, skip_delegation: bool, cbt: [u8; 32]) -> SrdMessage {
+    let mut hdr = SrdHeader::new(srd_msg_id::SRD_CONFIRM_MSG_ID, seq_num, use_cbt, true);
+
+    if skip_delegation {
+        hdr.add_flags(SRD_FLAG_SKIP);
+    }
+
     let confirm = SrdConfirm { cbt, mac: [0u8; 32] };
 
     SrdMessage::Confirm(hdr, confirm)
@@ -57,7 +62,7 @@ mod test {
 
     #[test]
     fn confirm_encoding() {
-        let msg = new_srd_confirm_msg(3, true, [0u8; 32]);
+        let msg = new_srd_confirm_msg(3, true, false, [0u8; 32]);
         assert_eq!(msg.msg_type(), SRD_CONFIRM_MSG_ID);
 
         let mut buffer: Vec<u8> = Vec::new();

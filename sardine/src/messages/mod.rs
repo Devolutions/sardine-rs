@@ -19,6 +19,7 @@ pub mod srd_msg_id {
 pub mod srd_flags {
     pub const SRD_FLAG_MAC: u16 = 0x0001;
     pub const SRD_FLAG_CBT: u16 = 0x0002;
+    pub const SRD_FLAG_SKIP: u16 = 0x0004;
 }
 
 pub use messages::srd_accept::SrdAccept;
