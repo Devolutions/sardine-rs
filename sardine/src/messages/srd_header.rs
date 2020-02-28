@@ -54,8 +54,8 @@ impl SrdHeader {
         self.flags & SRD_FLAG_SKIP != 0
     }
 
-    pub fn add_flags(&mut self, flags: u16) {
-        self.flags |= flags
+    pub fn add_skip_flag(&mut self) {
+        self.flags |= SRD_FLAG_SKIP
     }
 
     pub fn validate_flags(&self, mac_expected: bool) -> Result<()> {
@@ -70,6 +70,7 @@ impl SrdHeader {
                 self.msg_type
             )));
         }
+
         Ok(())
     }
 }

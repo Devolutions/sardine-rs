@@ -56,8 +56,8 @@ static TEST_CERT_DATA: &'static [u8] = b"\x30\x82\x02\xfa\x30\x82\x01\xe2\xa0\x0
 
 #[test]
 fn good_login_basic_blob() {
-    let mut client: Srd = Srd::new(false);
-    let mut server: Srd = Srd::new(true);
+    let mut client: Srd = Srd::new(false, false);
+    let mut server: Srd = Srd::new(true, false);
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();
@@ -104,8 +104,8 @@ fn good_login_basic_blob() {
 
 #[test]
 fn good_login_logon_blob() {
-    let mut client: Srd = Srd::new(false);
-    let mut server: Srd = Srd::new(true);
+    let mut client: Srd = Srd::new(false, false);
+    let mut server: Srd = Srd::new(true, false);
 
     let mut in_data: Vec<u8> = Vec::new();
     let mut out_data: Vec<u8> = Vec::new();
@@ -149,4 +149,35 @@ fn good_login_logon_blob() {
     assert!(server_status);
 
     assert_eq!(server.get_blob::<LogonBlob>().unwrap().unwrap(), logon_blob);
+}
+
+#[test]
+fn skip_delegation() {
+    let mut client = Srd::new(false, true);
+    let mut server = Srd::new(true, true);
+
+    let mut in_data: Vec<u8> = Vec::new();
+    let mut out_data: Vec<u8> = Vec::new();
+
+    let mut client_status: bool = false;
+    let mut server_status: bool = false;
+
+    while !(client_status && server_status) {
+        println!("Client");
+        client_status = client.authenticate(&in_data, &mut out_data).unwrap();
+        in_data = out_data;
+        out_data = Vec::new();
+
+        if client_status {
+            break;
+        }
+
+        println!("Server");
+        server_status = server.authenticate(&in_data, &mut out_data).unwrap();
+        in_data = out_data;
+        out_data = Vec::new();
+    }
+
+    assert!(client_status);
+    assert!(server_status);
 }

@@ -40,12 +40,8 @@ cfg_if! {
         #[wasm_bindgen]
         impl Srd {
             #[wasm_bindgen(constructor)]
-            pub fn new(is_server: bool) -> Srd {
-                Srd::_new(is_server, false)
-            }
-
-            pub fn new_multi_delegation() -> Srd {
-                Srd::_new(true, true)
+            pub fn new(is_server: bool, skip_delegation: bool) -> Srd {
+                Srd::_new(is_server, skip_delegation)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
@@ -93,12 +89,8 @@ cfg_if! {
         // Native public functions
         #[cfg(not(feature = "wasm"))]
         impl Srd {
-            pub fn new(is_server: bool) -> Srd {
-                Srd::_new(is_server, false)
-            }
-
-            pub fn new_multi_delegation() -> Srd {
-                Srd::_new(true, true)
+            pub fn new(is_server: bool, skip_delegation: bool) -> Srd {
+                Srd::_new(is_server, skip_delegation)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
@@ -312,9 +304,17 @@ impl Srd {
         let msg = SrdMessage::read_from(&mut reader)?;
 
         if msg.seq_num() != self.seq_num {
-            return Err(SrdError::BadSequence);
+            return Err(SrdError::BadSequence)
         }
         self.seq_num += 1;
+
+        if msg.has_skip() && !self.skip_delegation {
+            return Err(SrdError::Proto(String::from("SRD_FLAG_SKIP not expected")));
+        }
+
+        if !msg.has_skip() && self.skip_delegation {
+            return Err(SrdError::Proto(String::from("SRD_FLAG_SKIP expected")));
+        }
 
         // Keep the message to calculate future mac value
         self.messages.push(Vec::from(buffer));
@@ -327,7 +327,7 @@ impl Srd {
 
         // If CBT flag is set, we have to use CBT
         if msg.has_cbt() && !self.use_cbt {
-            return Err(SrdError::InvalidCert);
+            return Err(SrdError::InvalidCert)
         }
 
         Ok(msg)
@@ -340,6 +340,10 @@ impl Srd {
 
         if msg.seq_num() != self.seq_num {
             return Err(SrdError::BadSequence);
+        }
+
+        if self.skip_delegation {
+            msg.set_skip();
         }
 
         // Keep the message to calculate future mac value. The message doesn't contain the MAC since it is not calculated yet
@@ -600,7 +604,7 @@ impl Srd {
                 // Confirm
                 // Generate server cbt
                 let cbt_data = self.compute_cbt(&self.server_nonce)?;
-                let mut out_msg = new_srd_confirm_msg(self.seq_num, self.use_cbt, self.skip_delegation, cbt_data);
+                let mut out_msg = new_srd_confirm_msg(self.seq_num, self.use_cbt, cbt_data);
 
                 self.write_msg(&mut out_msg, &mut output_data)?;
                 Ok(())
@@ -645,6 +649,10 @@ impl Srd {
 
     // Server delegate -> result
     fn server_authenticate_2(&mut self, input_data: &[u8]) -> Result<()> {
+        if self.skip_delegation {
+            return Err(SrdError::BadSequence)
+        }
+
         // Receive delegate and verify credentials...
         let input_msg = self.read_msg(input_data)?;
         match input_msg {
@@ -654,7 +662,7 @@ impl Srd {
                 Ok(())
             }
             _ => {
-                return Err(SrdError::BadSequence);
+                return Err(SrdError::BadSequence)
             }
         }
     }
