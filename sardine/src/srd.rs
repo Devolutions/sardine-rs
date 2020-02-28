@@ -616,16 +616,16 @@ impl Srd {
                 }
 
                 if self.delegation {
-                // Build Delegate message
-                let mut out_msg = match self.blob {
-                    None => {
-                        return Err(SrdError::MissingBlob);
-                    }
-                    Some(ref b) => new_srd_delegate_msg(self.seq_num, self.use_cbt, b, self.cipher, &self.delegation_key, &self.iv)?,
-                };
+                    // Build Delegate message
+                    let mut out_msg = match self.blob {
+                        None => {
+                            return Err(SrdError::MissingBlob);
+                        }
+                        Some(ref b) => new_srd_delegate_msg(self.seq_num, self.use_cbt, b, self.cipher, &self.delegation_key, &self.iv)?,
+                    };
 
-                self.write_msg(&mut out_msg, &mut output_data)?;
-                Ok(())
+                    self.write_msg(&mut out_msg, &mut output_data)?;
+                    Ok(())
                 } else {
                     Ok(())
                 }
