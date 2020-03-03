@@ -50,6 +50,14 @@ impl SrdHeader {
         self.flags & SRD_FLAG_MAC != 0
     }
 
+    pub fn has_skip(&self) -> bool {
+        self.flags & SRD_FLAG_SKIP != 0
+    }
+
+    pub fn add_skip_flag(&mut self) {
+        self.flags |= SRD_FLAG_SKIP
+    }
+
     pub fn validate_flags(&self, mac_expected: bool) -> Result<()> {
         if !self.has_mac() && mac_expected {
             return Err(SrdError::Proto(format!(
@@ -62,6 +70,7 @@ impl SrdHeader {
                 self.msg_type
             )));
         }
+
         Ok(())
     }
 }

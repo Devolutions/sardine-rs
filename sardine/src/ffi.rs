@@ -2,13 +2,17 @@
 
 extern crate libc;
 
+use srd::fill_random;
 use srd::Srd;
 use blobs::SrdBlob;
+
 use std;
+use std::ptr::copy_nonoverlapping;
+use std::slice;
 
 #[no_mangle]
-pub extern "C" fn Srd_New(is_server: bool) -> *mut Srd {
-    Box::into_raw(Box::new(Srd::new(is_server))) as *mut Srd
+pub extern "C" fn Srd_New(is_server: bool, skip_delegation: bool) -> *mut Srd {
+    Box::into_raw(Box::new(Srd::new(is_server, skip_delegation))) as *mut Srd
 }
 
 #[no_mangle]
@@ -179,4 +183,103 @@ pub extern "C" fn Srd_GetIntegrityKey(srd_handle: *mut Srd, buffer: *mut u8, buf
     }
 
     return size;
+}
+
+const IV_LEN: usize = 32;
+
+#[no_mangle]
+pub extern "C" fn Srd_Encrypt(
+    srd_handle: *mut Srd,
+    data: *const u8, 
+    data_size: usize, 
+    output: *mut u8, 
+    output_size: *mut usize
+) -> i32 {
+    let srd = unsafe { &mut *srd_handle };
+    let key = srd.get_delegation_key();
+
+    if key.iter().all(|&x| x == 0) {
+        return -1
+    }
+
+    if (data_size % 16) != 0 {
+        return -1
+    }
+
+    if output_size.is_null() {
+        return -1
+    }
+
+    let available_len = unsafe { *output_size };
+    let required_len: usize = IV_LEN + data_size;
+
+    if available_len < required_len || output.is_null() {
+        unsafe { *output_size = required_len };
+        return 0
+    }
+
+    let mut iv = [0u8; IV_LEN];
+    if fill_random(&mut iv).is_err() {
+        return -1
+    }
+
+    let data = unsafe { slice::from_raw_parts(data, data_size) };
+    
+    if let Ok(encrypted_data) = srd.get_cipher().encrypt_data(&data, key.as_slice(), &iv) {
+        unsafe {
+            copy_nonoverlapping(iv.as_ptr(), output, IV_LEN);
+            copy_nonoverlapping(encrypted_data.as_ptr(), output.offset(IV_LEN as isize), data_size);
+            *output_size = required_len;
+        }
+
+        return 1
+    }
+
+    return -1
+}
+
+#[no_mangle]
+pub extern "C" fn Srd_Decrypt(
+    srd_handle: *mut Srd,
+    data: *const u8, 
+    data_size: usize, 
+    output: *mut u8, 
+    output_size: *mut usize
+) -> i32 {
+    let srd = unsafe { &mut *srd_handle };
+    let key = srd.get_delegation_key();
+
+    if key.iter().all(|&x| x == 0) {
+        return -1
+    }
+
+    if data_size < IV_LEN {
+        return -1
+    }
+
+    if output_size.is_null() {
+        return -1
+    }
+    
+    let available_len = unsafe { *output_size };
+    let required_len: usize = data_size - IV_LEN;
+
+    if available_len < required_len || output.is_null() {
+        unsafe { *output_size = required_len };
+        return 0
+    }
+
+    let data = unsafe { slice::from_raw_parts(data, data_size) };
+    let iv = &data[0..IV_LEN - 1];
+
+    if let Ok(decrypted_data) = srd.get_cipher().decrypt_data(&data[IV_LEN..], key.as_slice(), &iv) {
+        unsafe {
+            copy_nonoverlapping(decrypted_data.as_ptr(), output, required_len);
+            *output_size = required_len;
+        }
+
+        return 1
+    }
+
+    return -1
 }

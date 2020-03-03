@@ -71,6 +71,16 @@ impl SrdMessage {
         }
     }
 
+    pub fn has_skip(&self) -> bool {
+        match self {
+            SrdMessage::Initiate(hdr, _) => hdr.has_skip(),
+            SrdMessage::Offer(hdr, _) => hdr.has_skip(),
+            SrdMessage::Accept(hdr, _) => hdr.has_skip(),
+            SrdMessage::Confirm(hdr, _) => hdr.has_skip(),
+            SrdMessage::Delegate(hdr, _) => hdr.has_skip(),
+        }
+    }
+
     pub fn mac(&self) -> Option<&[u8]> {
         match self {
             SrdMessage::Initiate(_, _) => None,
@@ -88,6 +98,16 @@ impl SrdMessage {
             SrdMessage::Accept(_, ref mut accept) => Ok(accept.set_mac(mac)),
             SrdMessage::Confirm(_, ref mut confirm) => Ok(confirm.set_mac(mac)),
             SrdMessage::Delegate(_, ref mut delegate) => Ok(delegate.set_mac(mac)),
+        }
+    }
+
+    pub fn set_skip(&mut self) {
+        match self {
+            SrdMessage::Initiate(hdr, _) => hdr.add_skip_flag(),
+            SrdMessage::Offer(hdr, _) => hdr.add_skip_flag(),
+            SrdMessage::Accept(hdr, _) => hdr.add_skip_flag(),
+            SrdMessage::Confirm(hdr, _) =>hdr.add_skip_flag(),
+            _ => {},
         }
     }
 

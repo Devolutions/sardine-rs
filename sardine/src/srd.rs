@@ -40,8 +40,8 @@ cfg_if! {
         #[wasm_bindgen]
         impl Srd {
             #[wasm_bindgen(constructor)]
-            pub fn new(is_server: bool) -> Srd {
-                Srd::_new(is_server)
+            pub fn new(is_server: bool, skip_delegation: bool) -> Srd {
+                Srd::_new(is_server, skip_delegation)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8]) -> SrdJsResult {
@@ -80,6 +80,10 @@ cfg_if! {
                 self.integrity_key.to_vec()
             }
 
+            pub fn get_cipher(&self) -> Cipher {
+                self.cipher
+            }
+
             pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
                 self._set_cert_data(buffer).unwrap();
             }
@@ -89,8 +93,8 @@ cfg_if! {
         // Native public functions
         #[cfg(not(feature = "wasm"))]
         impl Srd {
-            pub fn new(is_server: bool) -> Srd {
-                Srd::_new(is_server)
+            pub fn new(is_server: bool, skip_delegation: bool) -> Srd {
+                Srd::_new(is_server, skip_delegation)
             }
 
             pub fn authenticate(&mut self, input_data: &[u8], output_data: &mut Vec<u8>) -> Result<bool> {
@@ -107,6 +111,10 @@ cfg_if! {
 
             pub fn get_integrity_key(&self) -> Vec<u8> {
                 self.integrity_key.to_vec()
+            }
+
+            pub fn get_cipher(&self) -> Cipher {
+                self.cipher
             }
 
             pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
@@ -132,6 +140,7 @@ pub struct Srd {
     output_data: Option<Vec<u8>>,
 
     is_server: bool,
+    skip_delegation: bool,
     key_size: u16,
     seq_num: u8,
     state: u8,
@@ -166,7 +175,7 @@ impl Srd {
 }
 
 impl Srd {
-    fn _new(is_server: bool) -> Srd {
+    fn _new(is_server: bool, skip_delegation: bool) -> Srd {
         let supported_ciphers;
         if cfg!(feature = "fips") {
             supported_ciphers = vec![Cipher::AES256];
@@ -181,6 +190,7 @@ impl Srd {
             output_data: None,
 
             is_server,
+            skip_delegation,
             key_size: 256,
             seq_num: 0,
             state: 0,
@@ -214,7 +224,13 @@ impl Srd {
         if self.is_server {
             match self.state {
                 0 => self.server_authenticate_0(input_data, output_data)?,
-                1 => self.server_authenticate_1(input_data, output_data)?,
+                1 => {
+                    self.server_authenticate_1(input_data, output_data)?;
+                    if self.skip_delegation {
+                        self.state += 1;
+                        return Ok(true);
+                    }
+                },
                 2 => {
                     self.server_authenticate_2(input_data)?;
                     self.state += 1;
@@ -296,9 +312,17 @@ impl Srd {
         let msg = SrdMessage::read_from(&mut reader)?;
 
         if msg.seq_num() != self.seq_num {
-            return Err(SrdError::BadSequence);
+            return Err(SrdError::BadSequence)
         }
         self.seq_num += 1;
+
+        if msg.has_skip() && !self.skip_delegation {
+            return Err(SrdError::Proto(String::from("SRD_FLAG_SKIP not expected")));
+        }
+
+        if !msg.has_skip() && self.skip_delegation {
+            return Err(SrdError::Proto(String::from("SRD_FLAG_SKIP expected")));
+        }
 
         // Keep the message to calculate future mac value
         self.messages.push(Vec::from(buffer));
@@ -311,7 +335,7 @@ impl Srd {
 
         // If CBT flag is set, we have to use CBT
         if msg.has_cbt() && !self.use_cbt {
-            return Err(SrdError::InvalidCert);
+            return Err(SrdError::InvalidCert)
         }
 
         Ok(msg)
@@ -324,6 +348,10 @@ impl Srd {
 
         if msg.seq_num() != self.seq_num {
             return Err(SrdError::BadSequence);
+        }
+
+        if self.skip_delegation {
+            msg.set_skip();
         }
 
         // Keep the message to calculate future mac value. The message doesn't contain the MAC since it is not calculated yet
@@ -600,22 +628,25 @@ impl Srd {
         // Confirm
         let input_msg = self.read_msg(input_data)?;
         match input_msg {
-            SrdMessage::Confirm(_hdr, confirm) => {
+            SrdMessage::Confirm(hdr, confirm) => {
                 // Verify Server cbt
                 let cbt_data = self.compute_cbt(&self.server_nonce)?;
                 if cbt_data != confirm.cbt {
                     return Err(SrdError::InvalidCbt);
                 }
 
-                // Build Delegate message
-                let mut out_msg = match self.blob {
-                    None => {
-                        return Err(SrdError::MissingBlob);
-                    }
-                    Some(ref b) => new_srd_delegate_msg(self.seq_num, self.use_cbt, b, self.cipher, &self.delegation_key, &self.iv)?,
-                };
+                if !hdr.has_skip() {
+                    // Build Delegate message
+                    let mut out_msg = match self.blob {
+                        None => {
+                            return Err(SrdError::MissingBlob);
+                        }
+                        Some(ref b) => new_srd_delegate_msg(self.seq_num, self.use_cbt, b, self.cipher, &self.delegation_key, &self.iv)?,
+                    };
 
-                self.write_msg(&mut out_msg, &mut output_data)?;
+                    self.write_msg(&mut out_msg, &mut output_data)?;
+                }
+
                 Ok(())
             }
             _ => {
@@ -626,6 +657,10 @@ impl Srd {
 
     // Server delegate -> result
     fn server_authenticate_2(&mut self, input_data: &[u8]) -> Result<()> {
+        if self.skip_delegation {
+            return Err(SrdError::BadSequence)
+        }
+
         // Receive delegate and verify credentials...
         let input_msg = self.read_msg(input_data)?;
         match input_msg {
@@ -635,7 +670,7 @@ impl Srd {
                 Ok(())
             }
             _ => {
-                return Err(SrdError::BadSequence);
+                return Err(SrdError::BadSequence)
             }
         }
     }
