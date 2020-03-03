@@ -253,7 +253,7 @@ pub extern "C" fn Srd_Decrypt(
         return -1
     }
 
-    if data_size < 32 {
+    if data_size < IV_LEN {
         return -1
     }
 
@@ -270,7 +270,7 @@ pub extern "C" fn Srd_Decrypt(
     }
 
     let data = unsafe { slice::from_raw_parts(data, data_size) };
-    let iv = &data[0..IV_LEN];
+    let iv = &data[0..IV_LEN - 1];
 
     if let Ok(decrypted_data) = srd.get_cipher().decrypt_data(&data[IV_LEN..], key.as_slice(), &iv) {
         unsafe {
