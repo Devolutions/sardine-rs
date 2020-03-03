@@ -277,6 +277,8 @@ pub extern "C" fn Srd_Decrypt(
             copy_nonoverlapping(decrypted_data.as_ptr(), output, required_len);
             *output_size = required_len;
         }
+
+        return 1
     }
 
     return -1
