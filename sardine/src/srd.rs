@@ -80,6 +80,10 @@ cfg_if! {
                 self.integrity_key.to_vec()
             }
 
+            pub fn get_cipher(&self) -> Cipher {
+                self.cipher
+            }
+
             pub fn set_cert_data(&mut self, buffer: Vec<u8>) {
                 self._set_cert_data(buffer).unwrap();
             }
@@ -107,6 +111,10 @@ cfg_if! {
 
             pub fn get_integrity_key(&self) -> Vec<u8> {
                 self.integrity_key.to_vec()
+            }
+
+            pub fn get_cipher(&self) -> Cipher {
+                self.cipher
             }
 
             pub fn set_cert_data(&mut self, buffer: Vec<u8>) -> Result<()> {
