@@ -1,6 +1,6 @@
 [package]
 name = "sardine"
-version = "0.4.1"
+version = "0.5.0"
 license = "MIT/Apache-2.0"
 homepage = "https://github.com/wayk/sardine-rs"
 repository = "https://github.com/wayk/sardine-rs"
@@ -9,7 +9,8 @@ description = "Secure Remote Delegation (SRD) Authentication Protocol"
 authors = ["Marc-André Moreau <marcandre.moreau@gmail.com>",
            "Philippe Dugre <pdugre@devolutions.net>",
            "François Dubois <francois.dubois.x@gmail.com>",
-           "Salah Kamate <mohamedsalahkamate@gmail.com>"]
+           "Salah Kamate <mohamedsalahkamate@gmail.com>",
+           "Richard Markiewicz <rmarkiewicz@devolutions.net>"]
 
 [lib]
 name = "sardine"
