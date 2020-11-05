@@ -1,6 +1,6 @@
 [package]
 name = "sardine"
-version = "0.5.0"
+version = "0.6.0"
 license = "MIT/Apache-2.0"
 homepage = "https://github.com/wayk/sardine-rs"
 repository = "https://github.com/wayk/sardine-rs"
@@ -32,6 +32,7 @@ num-traits = {version = "0.1", default_features = false}
 num-integer = {version = "0.1", default_features = false}
 aes256 = {package = "aes", version = "0.3.2", optional = true}
 block-modes = {version = "0.3.3", optional = true}
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 byteorder = "1.2"
 
@@ -42,6 +43,7 @@ default = []
 wasm = ["wasm-bindgen", "rand/wasm-bindgen"]
 aes = ["aes256", "block-modes"]
 fips = ["aes"]
+ser = ["serde"]
 
 # Workaround for building webassembly withouth breaking CI. For webassembly, build with --bin. Work currently in progress to allow target based crate-type.
 [[example]]

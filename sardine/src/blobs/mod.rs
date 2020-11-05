@@ -13,10 +13,14 @@ mod logon_blob;
 pub use self::basic_blob::BasicBlob;
 pub use self::logon_blob::LogonBlob;
 
+#[cfg(feature = "ser")]
+use serde::{Deserialize, Serialize};
+
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(feature = "ser", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SrdBlob {
     blob_type: String,
