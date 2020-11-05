@@ -16,9 +16,6 @@ use dh_params::SRD_DH_PARAMS;
 use messages::*;
 use srd_errors::SrdError;
 
-#[cfg(feature = "ser")]
-use serde::{Deserialize, Serialize};
-
 cfg_if! {
     if #[cfg(feature = "wasm")] {
         use wasm_bindgen::prelude::*;

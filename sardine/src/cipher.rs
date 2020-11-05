@@ -2,9 +2,6 @@ use srd_errors::SrdError;
 
 use chacha::{ChaCha, KeyStream};
 
-#[cfg(feature = "ser")]
-use serde::{Deserialize, Serialize};
-
 cfg_if! {
     if #[cfg(feature = "aes")]{
         use aes::Aes256;

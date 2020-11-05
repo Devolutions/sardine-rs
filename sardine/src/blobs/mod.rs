@@ -13,9 +13,6 @@ mod logon_blob;
 pub use self::basic_blob::BasicBlob;
 pub use self::logon_blob::LogonBlob;
 
-#[cfg(feature = "ser")]
-use serde::{Deserialize, Serialize};
-
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 

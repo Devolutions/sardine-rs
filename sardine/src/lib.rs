@@ -9,6 +9,13 @@ extern crate chacha;
 #[macro_use]
 extern crate cfg_if;
 
+cfg_if! {
+    if #[cfg(feature = "ser")]{
+        #[macro_use]
+        extern crate serde;
+    }
+}
+
 mod cipher;
 
 pub mod blobs;
