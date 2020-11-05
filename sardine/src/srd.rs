@@ -16,6 +16,9 @@ use dh_params::SRD_DH_PARAMS;
 use messages::*;
 use srd_errors::SrdError;
 
+#[cfg(feature = "ser")]
+use serde::{Deserialize, Serialize};
+
 cfg_if! {
     if #[cfg(feature = "wasm")] {
         use wasm_bindgen::prelude::*;
@@ -135,6 +138,7 @@ cfg_if! {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(feature = "ser", derive(Serialize, Deserialize))]
 pub struct Srd {
     blob: Option<SrdBlob>,
     output_data: Option<Vec<u8>>,
@@ -230,7 +234,7 @@ impl Srd {
                         self.state += 1;
                         return Ok(true);
                     }
-                },
+                }
                 2 => {
                     self.server_authenticate_2(input_data)?;
                     self.state += 1;
@@ -312,7 +316,7 @@ impl Srd {
         let msg = SrdMessage::read_from(&mut reader)?;
 
         if msg.seq_num() != self.seq_num {
-            return Err(SrdError::BadSequence)
+            return Err(SrdError::BadSequence);
         }
         self.seq_num += 1;
 
@@ -335,7 +339,7 @@ impl Srd {
 
         // If CBT flag is set, we have to use CBT
         if msg.has_cbt() && !self.use_cbt {
-            return Err(SrdError::InvalidCert)
+            return Err(SrdError::InvalidCert);
         }
 
         Ok(msg)
@@ -394,16 +398,22 @@ impl Srd {
 
     fn compute_mac(&self) -> Result<Vec<u8>> {
         let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-        hmac.input(&self.get_mac_data()
-            .map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?);
+        hmac.input(
+            &self
+                .get_mac_data()
+                .map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?,
+        );
         Ok(hmac.result().code().to_vec())
     }
 
     fn validate_mac(&self, msg: &SrdMessage) -> Result<()> {
         if msg.has_mac() {
             let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-            hmac.input(&self.get_mac_data()
-                .map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?);
+            hmac.input(
+                &self
+                    .get_mac_data()
+                    .map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?,
+            );
 
             if let Some(mac) = msg.mac() {
                 hmac.verify(mac).map_err(|_| SrdError::InvalidMac)
@@ -514,7 +524,9 @@ impl Srd {
             SrdMessage::Offer(_hdr, offer) => {
                 // Verify server key_size
                 if offer.key_size() != self.key_size {
-                    return Err(SrdError::Proto("Key size received in offer message is not equal to key size sent to server".to_owned()));
+                    return Err(SrdError::Proto(
+                        "Key size received in offer message is not equal to key size sent to server".to_owned(),
+                    ));
                 }
 
                 let server_ciphers = Cipher::from_flags(offer.ciphers);
@@ -641,7 +653,14 @@ impl Srd {
                         None => {
                             return Err(SrdError::MissingBlob);
                         }
-                        Some(ref b) => new_srd_delegate_msg(self.seq_num, self.use_cbt, b, self.cipher, &self.delegation_key, &self.iv)?,
+                        Some(ref b) => new_srd_delegate_msg(
+                            self.seq_num,
+                            self.use_cbt,
+                            b,
+                            self.cipher,
+                            &self.delegation_key,
+                            &self.iv,
+                        )?,
                     };
 
                     self.write_msg(&mut out_msg, &mut output_data)?;
@@ -658,7 +677,7 @@ impl Srd {
     // Server delegate -> result
     fn server_authenticate_2(&mut self, input_data: &[u8]) -> Result<()> {
         if self.skip_delegation {
-            return Err(SrdError::BadSequence)
+            return Err(SrdError::BadSequence);
         }
 
         // Receive delegate and verify credentials...
@@ -669,9 +688,7 @@ impl Srd {
 
                 Ok(())
             }
-            _ => {
-                return Err(SrdError::BadSequence)
-            }
+            _ => return Err(SrdError::BadSequence),
         }
     }
 

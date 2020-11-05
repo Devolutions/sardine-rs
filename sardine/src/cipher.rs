@@ -2,6 +2,9 @@ use srd_errors::SrdError;
 
 use chacha::{ChaCha, KeyStream};
 
+#[cfg(feature = "ser")]
+use serde::{Deserialize, Serialize};
+
 cfg_if! {
     if #[cfg(feature = "aes")]{
         use aes::Aes256;
@@ -16,6 +19,7 @@ const CHACHA20_FLAG: u32 = 0x00000100;
 const XCHACHA20_FLAG: u32 = 0x00000200;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
+#[cfg_attr(feature = "ser", derive(Serialize, Deserialize))]
 pub enum Cipher {
     AES256,
     ChaCha20,
