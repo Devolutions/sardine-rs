@@ -58,31 +58,7 @@ impl fmt::Display for SrdError {
     }
 }
 
-impl std::error::Error for SrdError {
-    fn description(&self) -> &str {
-        match *self {
-            SrdError::Io(ref error) => error.description(),
-            SrdError::Ffi(ref _error) => "There was an error while manipulating null-terminated strings",
-            SrdError::BadSequence => "Unexpected packet received",
-            SrdError::Crypto => "There was a cryptographic error",
-            SrdError::MissingBlob => "No blob specified",
-            SrdError::BlobFormatError => "Blob format error",
-            SrdError::Cipher => "There is a problem with supported ciphers",
-            SrdError::Rng => "Couldn't generate random keys",
-            SrdError::InvalidKeySize => "Key size must be 256, 512 or 1024",
-            SrdError::InvalidMac => "Message authentication code is invalid",
-            SrdError::InvalidCbt => "Channel binding token is invalid",
-            SrdError::InvalidCert => "Certificate is invalid or absent",
-            SrdError::InvalidCredentials => "Received credentials are invalid!",
-            SrdError::InvalidCstr => "Username or password is not null-terminated",
-            SrdError::InvalidDataLength => "The length of the data to be encrypted or decrypted is invalid",
-            SrdError::InvalidSignature => "Packet signature is invalid",
-            SrdError::UnknownMsgType => "Unknown message type",
-            SrdError::Proto(_) => "Protocol error",
-            SrdError::Internal(_) => "Internal error",
-        }
-    }
-}
+impl std::error::Error for SrdError {}
 
 impl From<Error> for SrdError {
     fn from(error: Error) -> SrdError {

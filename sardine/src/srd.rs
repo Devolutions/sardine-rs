@@ -5,7 +5,7 @@ use rand::{rngs::OsRng, RngCore};
 
 use num_bigint::BigUint;
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, Mac, NewMac};
 use sha2::{Digest, Sha256};
 
 use cipher::Cipher;
@@ -380,33 +380,33 @@ impl Srd {
         let mut cbt_data = [0u8; 32];
 
         if self.use_cbt {
-            let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
+            let mut hmac = Hmac::<Sha256>::new_from_slice(&self.integrity_key)?;
 
-            hmac.input(nonce);
+            hmac.update(nonce);
             if let Some(ref cert_data) = self.cert_data {
-                hmac.input(&cert_data);
+                hmac.update(&cert_data);
             } else {
                 return Err(SrdError::InvalidCert);
             }
-            cbt_data.as_mut().write_all(&hmac.result().code().to_vec())?;
+            cbt_data.as_mut().write_all(&hmac.finalize().into_bytes().to_vec())?;
         }
         Ok(cbt_data)
     }
 
     fn compute_mac(&self) -> Result<Vec<u8>> {
-        let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-        hmac.input(
+        let mut hmac = Hmac::<Sha256>::new_from_slice(&self.integrity_key)?;
+        hmac.update(
             &self
                 .get_mac_data()
                 .map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?,
         );
-        Ok(hmac.result().code().to_vec())
+        Ok(hmac.finalize().into_bytes().to_vec())
     }
 
     fn validate_mac(&self, msg: &SrdMessage) -> Result<()> {
         if msg.has_mac() {
-            let mut hmac = Hmac::<Sha256>::new_varkey(&self.integrity_key)?;
-            hmac.input(
+            let mut hmac = Hmac::<Sha256>::new_from_slice(&self.integrity_key)?;
+            hmac.update(
                 &self
                     .get_mac_data()
                     .map_err(|_| SrdError::Internal("MAC can't be calculated".to_owned()))?,
@@ -712,24 +712,24 @@ impl Srd {
 
     fn derive_keys(&mut self) {
         let mut hash = Sha256::new();
-        hash.input(&self.client_nonce);
-        hash.input(&self.secret_key);
-        hash.input(&self.server_nonce);
+        hash.update(&self.client_nonce);
+        hash.update(&self.secret_key);
+        hash.update(&self.server_nonce);
 
-        self.delegation_key.clone_from_slice(&hash.result().to_vec());
-
-        hash = Sha256::new();
-        hash.input(&self.server_nonce);
-        hash.input(&self.secret_key);
-        hash.input(&self.client_nonce);
-
-        self.integrity_key.clone_from_slice(&hash.result().to_vec());
+        self.delegation_key.clone_from_slice(&hash.finalize().to_vec());
 
         hash = Sha256::new();
-        hash.input(&self.client_nonce);
-        hash.input(&self.server_nonce);
+        hash.update(&self.server_nonce);
+        hash.update(&self.secret_key);
+        hash.update(&self.client_nonce);
 
-        self.iv.clone_from_slice(&hash.result().to_vec());
+        self.integrity_key.clone_from_slice(&hash.finalize().to_vec());
+
+        hash = Sha256::new();
+        hash.update(&self.client_nonce);
+        hash.update(&self.server_nonce);
+
+        self.iv.clone_from_slice(&hash.finalize().to_vec());
     }
 }
 
